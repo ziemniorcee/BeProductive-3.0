@@ -4,20 +4,20 @@ import { LinearGradient as BgGradient } from "expo-linear-gradient";
 import { SvgXml } from "react-native-svg";
 import {Image} from "expo-image";
 import React from "react";
-import {CheckboxStep} from "./CheckboxStep";
+import {CheckboxStep} from "../common/CheckboxStep";
 import {BlurView} from "expo-blur";
-import {CheckboxMain} from "./CheckboxMain";
-import {useMyDay} from "../../context/MyDayContext";
-import {priorityColor} from "../../theme/tokens";
+import {CheckboxMain} from "../common/CheckboxMain";
+import {useMyDay} from "../../../context/MyDayContext";
+import {PRIORITY, priorityColor} from "../../../theme/tokens";
 
 const STROKE = 3
 const R = 12
 
 const ICONS = {
-    date: require("../../../../assets/todo/dateWarning.png"),
-    deadline1: require("../../../../assets/todo/hourglass.png"),
-    deadline2: require("../../../../assets/todo/hourglass2.png"),
-    asap: require("../../../../assets/todo/fire1.png"),
+    date: require("../../../../../assets/todo/dateWarning.png"),
+    deadline1: require("../../../../../assets/todo/hourglass.png"),
+    deadline2: require("../../../../../assets/todo/hourglass2.png"),
+    asap: require("../../../../../assets/todo/fire1.png"),
 };
 
 
@@ -39,10 +39,11 @@ export function TodoItem({ goal, app }) {
 
     const [size, setSize] = React.useState({ w: 0, h: 0 });
 
-    const importanceColor = React.useMemo(
-        () => (goal.dateType === 2 ? priorityColor(4) : priorityColor(goal.importance)),
-        [goal.dateType, goal.importance]
-    );
+    const importanceColor = React.useMemo(() => {
+        if (goal.dateType === 4) return priorityColor(0);
+        if (goal.dateType === 2) return priorityColor(4);
+        return priorityColor(goal.importance);
+    }, [goal.dateType, goal.importance]);
 
     const categoryColor = React.useMemo(
         () =>
@@ -56,6 +57,7 @@ export function TodoItem({ goal, app }) {
         () => (goal.projectPublicId ? app.services.projects?.getByPublicId?.(goal.projectPublicId) ?? null : null),
         [goal.projectPublicId, app.services.projects]
     );
+    const projectColor = app.services.categories?.colorByPublicId?.(project?.categoryPublicId, "#3C3C3C") ?? "#3C3C3C";
 
     const xml = React.useMemo(() => {
         const icon = project?.svgIcon;
@@ -76,15 +78,15 @@ export function TodoItem({ goal, app }) {
             onPress={() => openEdit(goal.publicId)}
         >
             <View style={styles.cardBgClip} pointerEvents="none">
-                <BlurView intensity={10} tint="dark" style={styles.cardBg} pointerEvents="none" />
+                <BlurView intensity={20} tint="dark" style={styles.cardBg} pointerEvents="none" />
                 <BgGradient
-                    colors={["rgba(0,0,0,0.55)", "rgba(0,0,0,0.35)"]}
+                    colors={["rgba(0,0,0,0.85)", "rgba(0,0,0,0.55)"]}
                     style={styles.cardBg}
                     pointerEvents="none"
                 />
             </View>
             <View style={styles.inner}>
-                <CheckboxMain checked={goal.checkState} color={importanceColor}
+                <CheckboxMain checked={goal.checkState} color={importanceColor} style={{marginLeft: 6}}
                               onPress={() => onToggleMain(goal.publicId, !goal.checkState)}></CheckboxMain>
                 <View style={{ flex: 1 }}>
                     <Text style={[styles.titleText, goal.checkState && styles.titleDone]}>
@@ -106,7 +108,7 @@ export function TodoItem({ goal, app }) {
                 </View>
                 {xml ? (
                     <View style={styles.iconTopCenter} pointerEvents="none">
-                        <SvgXml xml={xml} width={Platform.select({ web: 30, default: 20 })} height={Platform.select({ web: 30, default: 20 })} color={categoryColor} />
+                        <SvgXml xml={xml} width={Platform.select({ web: 30, default: 20 })} height={Platform.select({ web: 30, default: 20 })} color={projectColor} />
                     </View>
                 ) : null}
             </View>

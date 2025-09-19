@@ -2,6 +2,7 @@
 import React, {PureComponent} from "react";
 import {View, StyleSheet, Platform, Pressable, Modal} from "react-native";
 import Svg, {Defs, Mask, Rect, RadialGradient, Stop} from "react-native-svg";
+import {GestureHandlerRootView} from "react-native-gesture-handler";
 
 export default class Vignette extends PureComponent {
     static defaultProps = {
@@ -50,11 +51,11 @@ export default class Vignette extends PureComponent {
     }
 
     close = () => {
-        console.log()
         if (this.allowClose) {
             this.props.app.services.myday.closeEdit();
         }
     };
+
     render() {
         const {w, h} = this.state;
         const {opacity, radius, children, style, app} = this.props;
@@ -62,6 +63,7 @@ export default class Vignette extends PureComponent {
 
         return (
             <Modal transparent animationType="fade">
+                <GestureHandlerRootView style={{ flex: 1 }}>
                 <Pressable style={{
                     ...StyleSheet.absoluteFillObject,
                     justifyContent: "center",
@@ -92,6 +94,7 @@ export default class Vignette extends PureComponent {
                         )}
                     </View>
                 </Pressable>
+                </GestureHandlerRootView>
             </Modal>
         );
     }

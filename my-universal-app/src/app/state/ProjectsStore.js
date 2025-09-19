@@ -32,7 +32,6 @@ export class ProjectsStore {
 
     nameByPublicId(id) {
         const p = this.getByPublicId(id);
-        console.log(p)
         return p?.name ?? "No project";
     }
 

@@ -37,9 +37,6 @@ const electronDir = path.resolve(__dirname, '..');
 const expoRoot = findExpoRoot(electronDir);
 const outDir = path.resolve(electronDir, 'web-dist');
 
-console.log(`> Expo root: ${expoRoot}`);
-console.log(`> Output dir: ${outDir}\n`);
 
 const cmd = `npx expo export --platform web --output-dir "${outDir}" --clear --non-interactive`;
 execSync(cmd, { cwd: expoRoot, stdio: 'inherit', shell: true }); // <- shell:true fixes Windows
-console.log('\n✓ Expo web export complete.');

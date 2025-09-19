@@ -1,10 +1,10 @@
 import {Platform, Pressable, StyleSheet} from "react-native";
 import Svg, {Path} from "react-native-svg";
 
-export function CheckboxMain({ checked, color = "#FFD500", onPress }) {
+export function CheckboxMain({ checked, color = "#FFD500", onPress, style }) {
     const size = Platform.select({ web: 28, default: 20 });   // match box
     return (
-        <Pressable onPress={onPress} hitSlop={8} style={[styles.box, { borderColor: color }]}>
+        <Pressable onPress={onPress} hitSlop={8} style={[style, styles.box, { borderColor: color }]}>
             {checked ? (
                 <Svg width={size - 6} height={size - 6} viewBox="0 0 24 24">
                     <Path
@@ -23,13 +23,13 @@ export function CheckboxMain({ checked, color = "#FFD500", onPress }) {
 
 const styles = StyleSheet.create({
     box: {
+
         width: Platform.select({ web: 28, default: 20 }),
         height: Platform.select({ web: 28, default: 20 }),
         borderRadius: 90,
         borderWidth: Platform.select({ web: 3, default: 2 }),
         marginRight: Platform.select({ web: 12, default: 6 }),
         backgroundColor: "transparent",
-        marginLeft: 6,
         marginTop: Platform.select({ web: 6, default: 7 }),
         alignItems: "center",
         justifyContent: "center",   // centers the checkmark
