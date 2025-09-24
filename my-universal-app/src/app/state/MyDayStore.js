@@ -9,9 +9,8 @@ export class MyDayStore {
         error: null,
         editTask: null,
         editOpen: false,
-        newTask: null,
-        newTaskOpen: false,
-        editType: null
+        editType: null,
+        myDaySetupOpen: false,
     };
 
     constructor({repo}) {
@@ -67,6 +66,9 @@ export class MyDayStore {
                 goals = raw['tasks'];
             } else if (params.type === "Day") {
                 const raw = await this.#repo.dayGoals(params);
+                goals = raw['tasks'];
+            } else if (params.type === "Month") {
+                const raw = await this.#repo.monthGoals(params);
                 goals = raw['tasks'];
             }
 
@@ -136,7 +138,6 @@ export class MyDayStore {
     }
 
     patchEdit = (change) => {
-        console.log(change)
         const cur = this.state.editTask ?? {};
         const next = {...cur, ...change};          // replace object
         this.state = {...this.state, editTask: next}; // replace state
@@ -172,5 +173,21 @@ export class MyDayStore {
                 error: String(err)
             }));
         }
+    }
+
+    openMyDaySetup() {
+        // this._set({editTask: {...task}, myDaySetupOpen: true, editType: type});
+        this._set({myDaySetupOpen: true});
+    }
+
+    patchMydaySetup = (change) => {
+        // const cur = this.state.editTask ?? {};
+        // const next = {...cur, ...change};          // replace object
+        // this.state = {...this.state, editTask: next}; // replace state
+        // this.#emit();
+    };
+
+    closeMyDaySetup() {
+        this._set({myDaySetupOpen: false});
     }
 }

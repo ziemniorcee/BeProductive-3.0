@@ -19,11 +19,18 @@ export function createApp(opts = {}) {
     app.start = async () => {
         const authed = await app.services.auth.is_token_valid();
         if (!authed) { app.view.go("login"); return; }
-        await Promise.allSettled([
-            app.services.categories.reload(),
-            app.services.projects.reload(),
-        ]);
-        app.view.go("myday");
+
+        try {
+            await Promise.all([
+                app.services.categories.reload(),
+                app.services.projects.reload(),
+            ]);
+            await app.services.myday.load(); // fetch after metadata
+            app.view.go("myday");
+        } catch (e) {
+            // handle error, keep user on a safe screen
+            app.view.go("login");
+        }
     };
 
     return app;

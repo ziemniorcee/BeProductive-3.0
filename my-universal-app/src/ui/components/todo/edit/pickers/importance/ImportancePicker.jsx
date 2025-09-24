@@ -4,7 +4,6 @@ import {PRIORITY, priorityColor, priorityName} from "../../../../../theme/tokens
 import PickerCore from "../common/PickerCore";
 
 export default function ImportancePicker({ app, importance }) {
-    console.log("2",importance)
     let task_importance = 2
     if (importance !== null) task_importance = importance;
 

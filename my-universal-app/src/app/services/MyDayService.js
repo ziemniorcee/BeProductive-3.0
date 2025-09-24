@@ -61,11 +61,12 @@ export default class MyDayService {
     }
 
     patchEdit = (change) => {
-        console.log("patch2")
+        console.log('patch')
         this.store.patchEdit(change)
     }
 
     closeEdit = async (commit = true) => {
+        console.log("TOTO")
         const {editTask, editOriginal, editType} = this.store.state;
         if (!editTask) return this.store.closeEdit();
         if (!commit) return this.store.closeEdit();
@@ -100,4 +101,16 @@ export default class MyDayService {
 
         this.store.closeEdit();
     };
+
+    async openMyDaySetup() {
+        this.store.openMyDaySetup()
+    }
+
+    patchMydaySetup = (change) => {
+        this.store.patchMydaySetup(change)
+    }
+
+    closeMydaySetup = async () => {
+        this.store.closeMyDaySetup();
+    }
 }

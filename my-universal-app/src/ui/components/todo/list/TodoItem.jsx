@@ -173,6 +173,7 @@ const styles = StyleSheet.create({
         marginTop: Platform.select({ web: 6, default: 7 }),
     },
     titleText: {
+        width: "calc(100% - 40px)",
         marginLeft: 3,
         color: "#fff",
         fontSize: Platform.select({ web: 20, default: 15 }),

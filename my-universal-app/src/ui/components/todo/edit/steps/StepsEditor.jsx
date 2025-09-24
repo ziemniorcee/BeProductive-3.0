@@ -8,7 +8,7 @@ import {CheckboxStep} from "../../common/CheckboxStep";
 import * as select from "react-native";
 import StepRow from "./StepRow";
 
-const ROW_H = 36;
+const ROW_H = 40;
 const C = {
     text: "#FFFFFF",
     sub: "#BDBDBD",

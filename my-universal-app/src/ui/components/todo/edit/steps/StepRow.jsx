@@ -24,7 +24,7 @@ export default function StepRow({ item, onDrag, onToggle, onText, color, isActiv
     );
 }
 
-const ROW_H = 36;
+const ROW_H = 40;
 const C = {
     text: "#FFFFFF",
     sub: "#BDBDBD",
@@ -36,7 +36,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         minHeight: ROW_H,
         gap: Platform.select({ web: 10, default: 6 }),
-        paddingVertical: Platform.select({ web: 6, default: 0 }),
+        paddingVertical: Platform.select({ web: 6, default: 6 }),
         paddingRight: 40,
         width: "100%",
     },

@@ -33,9 +33,7 @@ export default function DatePickerContent({ current, onPick = () => {} }) {
     const selectedISO = toISO(base);
 
     const select = React.useCallback((change) => {
-        console.log(change)
         const iso = typeof change === "string" ? change.slice(0, 10) : toLocalISO(change);
-        console.log(iso)
         patchEdit({ addDate: iso });
         onPick?.(iso);
     }, [patchEdit, "addDate", onPick]);

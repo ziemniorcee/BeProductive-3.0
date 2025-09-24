@@ -5,6 +5,7 @@ export const PRIORITY = Object.freeze([
     {level: 1, name: "IV Priority", color: "#24FF00"},
     {level: 0, name: "V Priority", color: "#0000FF"},
 ]);
+export const DEFAULT = PRIORITY.find(p => p.level === 2);
 
 const byLevel = (lvl) => PRIORITY.find(p => p.level === Number(lvl)) ?? DEFAULT;
 

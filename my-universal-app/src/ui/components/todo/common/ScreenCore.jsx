@@ -1,15 +1,20 @@
 import {MyDayProvider} from "../../../context/MyDayContext";
-import {FlatList, Pressable, Text, View, StyleSheet, Platform} from "react-native";
+import {FlatList, Pressable, Text, View, StyleSheet, Platform, useWindowDimensions} from "react-native";
 import {Image} from "expo-image";
-import {SafeAreaView} from "react-native-safe-area-context";
+import {SafeAreaView, useSafeAreaInsets} from "react-native-safe-area-context";
 import TodoHeader from "./TodoHeader";
 import {TodoItem} from "../list/TodoItem";
 import {Ionicons} from "@expo/vector-icons";
 import AppBar from "../../common/AppBar";
-import EditTaskEntry from "../edit/EditTaskEntry";
+import EditTask from "../edit/EditTask";
 import React from "react";
+import MyDaySetup from "../myDaySetup/MyDaySetup";
 
-export default function ScreenCore ({app, type, goals, loading, state}) {
+export default function ScreenCore({app, type, date, goals, loading, state}) {
+    const {height} = useWindowDimensions();
+    const insets = useSafeAreaInsets();
+    const nativeMaxH = Math.max(0, height - 130 - insets.top - insets.bottom);
+
     return (
         <MyDayProvider app={app}>
             <View style={styles.root}>
@@ -19,9 +24,12 @@ export default function ScreenCore ({app, type, goals, loading, state}) {
                 </View>
 
                 <SafeAreaView style={styles.safe} edges={["top"]}>
-                    <TodoHeader type={type} app={app}/>
+                    <TodoHeader type={type} app={app} date={date}/>
 
-                    <FlatList style={styles.container}
+                    <FlatList style={[
+                        styles.container,
+                        Platform.OS !== "web" && {maxHeight: nativeMaxH},
+                    ]}
                               data={loading ? [] : goals}
                               keyExtractor={(g) => g.publicId}
                               renderItem={({item}) => <TodoItem goal={item} app={app} style={styles.task}/>}
@@ -30,7 +38,7 @@ export default function ScreenCore ({app, type, goals, loading, state}) {
                               ListFooterComponent={
                                   <View style={styles.inlineActions}>
                                       <Pressable style={[styles.btn]}
-                                                 onPress={() => app.view.go("settings")}>
+                                                 onPress={() => app.services.myday.openMyDaySetup()}>
                                           <Ionicons name="settings-sharp" size={25} color="#fff"/>
                                           <Text style={styles.btnText}>Configure</Text>
                                       </Pressable>
@@ -45,7 +53,7 @@ export default function ScreenCore ({app, type, goals, loading, state}) {
                               contentContainerStyle={styles.listContent}
                     />
 
-                    <AppBar/>
+                    <AppBar app={app}/>
                     <Pressable
                         style={styles.test}
                         hitSlop={10}
@@ -57,7 +65,11 @@ export default function ScreenCore ({app, type, goals, loading, state}) {
                         <Text>T</Text>
                     </Pressable>
                     {state.editOpen && (
-                        <EditTaskEntry state={state} app={app} closeEdit={() => patchEdit({editOpen: false})}/>
+                        <EditTask state={state} app={app} closeEdit={() => app.services.myday.closeEdit()}/>
+                    )}
+
+                    {state.myDaySetupOpen && (
+                        <MyDaySetup state={state} app={app} closeSetup={() => app.services.myday.closeMydaySetup()}/>
                     )}
                 </SafeAreaView>
 
@@ -71,7 +83,6 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: "#000",
         userSelect: "none",
-
     },
     bgLayer: {
         ...StyleSheet.absoluteFillObject,
@@ -85,7 +96,15 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         padding: 24,
+        maxHeight: "calc(100% - 200px)",
+        overflowY: 'auto',
+        overscrollBehavior: 'contain',
+        scrollBehavior: 'smooth',
+        scrollbarWidth: "thin",
+        scrollbarColor: "#2A2A2A #000000",
+        scrollbarGutter: "stable",
     },
+
     wrap: {
         position: "relative",
         width: Platform.select({web: "60%", default: "120%"}),

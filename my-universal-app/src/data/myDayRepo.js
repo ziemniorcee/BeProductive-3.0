@@ -38,6 +38,17 @@ export function makeMyDayRepo({ http }) {
             return res.json(); // expect { tasks: [...] }
         },
 
+        async monthGoals({dates}) {
+            const qs = new URLSearchParams({
+                dates,
+            }).toString();
+
+            const res = await http(`/api/get-month-view?${qs}`, { method: "GET" });
+
+            if (!res.ok) throw new Error(`month.list ${res.status}`);
+            return res.json(); // expect { tasks: [...] }
+        },
+
         // PATCH /api/steps/:stepId  body: { taskId, checked }
         async setStepChecked({ stepId, checked }) {
             const qs = new URLSearchParams({

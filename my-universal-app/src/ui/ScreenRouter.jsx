@@ -4,6 +4,8 @@ import MyDayScreen from "./screens/MyDayScreen";
 import NowScreen from "./screens/NowScreen";
 import InboxScreen from "./screens/InboxScreen";
 import DayScreen from "./screens/DayScreen";
+import MonthScreen from "./screens/MonthScreen";
+import StrategyScreen from "./screens/StrategyScreen";
 
 const registry = {
     login: LoginScreen,
@@ -11,6 +13,8 @@ const registry = {
     now: NowScreen,
     inbox: InboxScreen,
     day:DayScreen,
+    month: MonthScreen,
+    strategy: StrategyScreen,
 };
 
 export function ScreenRouter({ view, app }) {

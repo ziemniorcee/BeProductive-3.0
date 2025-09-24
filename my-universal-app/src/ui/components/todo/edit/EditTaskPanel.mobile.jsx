@@ -38,6 +38,7 @@ export default function EditTaskPanelMobile({app}) {
 
     const {state, patchEdit} = useMyDay(app);
     const task = state.editTask;
+    console.log(task)
     const [note, setNote] = React.useState(task.note ?? "");
     const importanceColor = React.useMemo(() => priorityColor(task.importance), [task.importance]);
     const changeName = React.useCallback((t) => patchEdit({name: t}), [patchEdit]);
@@ -208,11 +209,11 @@ export default function EditTaskPanelMobile({app}) {
                     <View style={s.hr}/>
 
                     <View style={s.pickers}>
-                        <View style={s.cell}><CategoryPicker app={app}/></View>
-                        <View style={s.cell}><ProjectPicker app={app}/></View>
-                        <View style={s.cell}><ImportancePicker app={app}/></View>
-                        <View style={s.cell}><TaskTypePicker app={app}/></View>
-                        <View style={[s.cell, s.full]}><DatePicker app={app}/></View>
+                        <View style={s.cell}><CategoryPicker app={app} id={task.categoryPublicId}/></View>
+                        <View style={s.cell}><ProjectPicker app={app} id={task.projectPublicId}/></View>
+                        <View style={s.cell}><ImportancePicker app={app} importance={task.importance}/></View>
+                        <View style={s.cell}><TaskTypePicker app={app} taskType={task.dateType}/></View>
+                        <View style={[s.cell, s.full]}><DatePicker app={app} date={task.addDate}/></View>
                     </View>
                 </Animated.ScrollView>
             </Animated.View>
@@ -236,7 +237,7 @@ const s = StyleSheet.create({
     },
     hr: {height: 1, backgroundColor: C.line, marginBottom: 10, width: "maxContent"},
     content: {paddingBottom: 28, gap: 12},
-    titleRow: {flexDirection: "row", alignItems: "center", marginTop: 6, marginBottom: 4, paddingHorizontal: 6},
+    titleRow: {flexDirection: "row", alignItems: "flex-start", marginTop: 6, marginBottom: 4, paddingHorizontal: 6},
     title: {flex: 1, color: C.text, fontSize: 20, fontWeight: "400", padding: 0, marginLeft: 8, marginTop: 5},
     noteWrap: {minHeight: 26, justifyContent: "center", marginLeft: 10},
     noteIcon: {position: "absolute", left: 1, top: 5, width: 16, height: 16},
