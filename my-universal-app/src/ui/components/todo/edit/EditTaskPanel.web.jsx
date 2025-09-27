@@ -11,7 +11,7 @@ import DatePicker from "./pickers/date/DatePicker";
 import StepsEditor from "./steps/StepsEditor";
 import {priorityColor} from "../../../theme/tokens";
 
-export default function EditTaskPanel({app}) {
+export default function EditTaskPanelWeb({app}) {
     const {state, patchEdit} = useMyDay(app);
     const task = state.editTask;
     const [note, setNote] = React.useState(task.note ?? "");

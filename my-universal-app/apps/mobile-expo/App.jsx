@@ -3,6 +3,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import {createApp} from "../../src/app/container";
 import {ScreenRouter} from "../../src/ui/ScreenRouter";
 import {GestureHandlerRootView} from "react-native-gesture-handler";
+import {StatusBar} from "react-native";
 
 const app = createApp();
 
@@ -15,7 +16,8 @@ export default function App() {
     }, []);
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
-        <SafeAreaProvider>
+        <SafeAreaProvider style={{ flex: 1 }}>
+            <StatusBar hidden  />
             <ScreenRouter view={view} app={app} />
         </SafeAreaProvider>
         </GestureHandlerRootView>

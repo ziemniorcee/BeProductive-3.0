@@ -2,7 +2,7 @@ import React from "react";
 import { Modal, Platform, useWindowDimensions } from "react-native";
 import EditTaskPanelMobile from "./EditTaskPanel.mobile";
 import Vignette from "../../common/Vignette";
-import EditTaskPanel from "./EditTaskPanel";
+import EditTaskPanelWeb from "./EditTaskPanel.web";
 // import EditTaskPanel (desktop) and EditTaskPanelMobile (mobile)
 
 export default function EditTask({ state, app, closeEdit }) {
@@ -25,7 +25,7 @@ export default function EditTask({ state, app, closeEdit }) {
         </Modal>
     ) : (
         <Vignette window={{ rx: 24, width: 0.7, height: 0.8 }} pointerEvents="box-none" app={app} onClose={closeEdit}>
-            <EditTaskPanel app={app} />
+            <EditTaskPanelWeb app={app} />
         </Vignette>
     );
 }

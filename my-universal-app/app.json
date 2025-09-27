@@ -3,7 +3,7 @@
     "name": "my-universal-app",
     "slug": "my-universal-app",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "scheme": "myuniversalapp",
@@ -23,10 +23,14 @@
       },
       "package": "com.anonymous.myuniversalapp"
     },
-    "androidStatusBar": { "translucent": false, "backgroundColor": "#000000" },
+    "androidStatusBar": { "translucent": true, "backgroundColor": "#000000" },
     "web": {
       "bundler": "metro"
     },
-    "plugins": []
+    "plugins": [],
+    "androidNavigationBar": {
+      "backgroundColor": "#000000",
+      "barStyle": "light-content"
+    }
   }
 }

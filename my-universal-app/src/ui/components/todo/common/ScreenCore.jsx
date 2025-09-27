@@ -26,6 +26,7 @@ export default function ScreenCore({app, type, date, goals, loading, state}) {
                 <SafeAreaView style={styles.safe} edges={["top"]}>
                     <TodoHeader type={type} app={app} date={date}/>
 
+                    <View style={styles.body}>
                     <FlatList style={[
                         styles.container,
                         Platform.OS !== "web" && {maxHeight: nativeMaxH},
@@ -52,7 +53,7 @@ export default function ScreenCore({app, type, date, goals, loading, state}) {
                               }
                               contentContainerStyle={styles.listContent}
                     />
-
+                    </View>
                     <AppBar app={app}/>
                     <Pressable
                         style={styles.test}
@@ -83,6 +84,7 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: "#000",
         userSelect: "none",
+        minHeight: 0,
     },
     bgLayer: {
         ...StyleSheet.absoluteFillObject,
@@ -92,17 +94,20 @@ const styles = StyleSheet.create({
     },
     safe: {
         flex: 1,
+        minHeight: 0,
     },
+    body: { flex: 1, minHeight: 0 },
     container: {
         flex: 1,
         padding: 24,
-        maxHeight: "calc(100% - 200px)",
-        overflowY: 'auto',
+        minHeight:"80%",
+        overflowY: 'hidden',
         overscrollBehavior: 'contain',
         scrollBehavior: 'smooth',
         scrollbarWidth: "thin",
         scrollbarColor: "#2A2A2A #000000",
         scrollbarGutter: "stable",
+
     },
 
     wrap: {
@@ -183,6 +188,7 @@ const styles = StyleSheet.create({
     listContent: {
         paddingHorizontal: 16,
         paddingBottom: 24,
+
     },
     inlineActions: {
         flexDirection: "row",

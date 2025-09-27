@@ -10,9 +10,14 @@ const ICONS = [
     require("../../../../assets/phoenix.png"),
 ];
 
-export default function AppBar({app}) {
+const BAR_H = Platform.select({ web: 500, default: 350 });
+
+export default function AppBar({app, horizontal=true}) {
+    const styles = horizontal ? stylesHorizontal : stylesVertical;
+    const dir = horizontal ? 'row' : 'column-reverse';
+    // if (vertical)
     return (
-        <View style={styles.wrap}>
+        <View style={[styles.wrap, { flexDirection: dir }]} >
             <Pressable onPress={() => app.view.go("myday")}>
                 <Image source={require("../../../../assets/goal.png")} style={styles.Image} contentFit="contain"
                        transition={300}/>
@@ -28,21 +33,21 @@ export default function AppBar({app}) {
 
             <Image source={require("../../../../assets/timeline.png")} style={styles.Image} contentFit="contain"
                    transition={300}/>
-
         </View>
     )
 }
 
-const styles = StyleSheet.create({
+const stylesHorizontal = StyleSheet.create({
     wrap: {
         height: Platform.select({web: 80, default: 60}),
         width: Platform.select({web: 500, default: 350}),
+        backgroundColor:"#000000",
         alignItems: "center",
         alignSelf: "center",
         justifyContent: "center",
         position: "absolute",
         flexDirection: "row",
-        bottom: Platform.select({web: 30, default: 10}),
+        bottom: Platform.select({web: 30, default: 60}),
         zIndex: 1000,
         borderRadius: Platform.select({web: 30, default: 20}),
         borderColor: "#FFFFFF",
@@ -60,3 +65,30 @@ const styles = StyleSheet.create({
 
     }
 })
+
+const stylesVertical = StyleSheet.create({
+    wrap: {
+        width: Platform.select({ web: 80, default: 60 }),
+        height: Platform.select({ web: 500, default: 350 }),
+        backgroundColor: "#000000",
+        alignItems: "center",
+        justifyContent: "center",
+        position: "absolute",
+        right: Platform.select({ web: 30, default: 10 }), // stick to right
+        zIndex: 1000,
+        flexDirection: "column",
+        borderRadius: Platform.select({ web: 30, default: 20 }),
+        borderColor: "#FFFFFF",
+        borderWidth: 2,
+        gap: Platform.select({ web: 40, default: 25 }),
+
+    },
+    Image: {
+        height: Platform.select({ web: 50, default: 30 }),
+        width: Platform.select({ web: 50, default: 30 }),
+    },
+    ImageMain: {
+        height: Platform.select({ web: 60, default: 40 }),
+        width: Platform.select({ web: 60, default: 40 }),
+    },
+});
