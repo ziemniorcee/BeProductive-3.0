@@ -5,7 +5,7 @@ import {SafeAreaView, useSafeAreaInsets} from "react-native-safe-area-context";
 import TodoHeader from "./TodoHeader";
 import {TodoItem} from "../list/TodoItem";
 import {Ionicons} from "@expo/vector-icons";
-import AppBar from "../../common/AppBar";
+import AppBar from "../../common/appBar/AppBar";
 import EditTask from "../edit/EditTask";
 import React from "react";
 import MyDaySetup from "../myDaySetup/MyDaySetup";
@@ -54,7 +54,7 @@ export default function ScreenCore({app, type, date, goals, loading, state}) {
                               contentContainerStyle={styles.listContent}
                     />
                     </View>
-                    <AppBar app={app}/>
+                    <AppBar app={app} horizontal={true}/>
                     <Pressable
                         style={styles.test}
                         hitSlop={10}

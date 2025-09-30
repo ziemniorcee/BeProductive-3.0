@@ -6,7 +6,7 @@ import {Image} from "expo-image";
 import TodoHeader from "../components/todo/common/TodoHeader";
 import {TodoItem} from "../components/todo/list/TodoItem";
 import {Ionicons} from "@expo/vector-icons";
-import AppBar from "../components/common/AppBar";
+import AppBar from "../components/common/appBar/AppBar";
 import EditTask from "../components/todo/edit/EditTask";
 import {SafeAreaView} from "react-native-safe-area-context";
 import MonthCalendar from "../components/todo/month/MonthCalendar";

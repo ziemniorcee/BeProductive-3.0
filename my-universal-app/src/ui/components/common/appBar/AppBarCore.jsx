@@ -3,35 +3,35 @@ import {Image} from "expo-image";
 import React from "react";
 
 const ICONS = [
-    require("../../../../assets/phoenix.png"),
-    require("../../../../assets/phoenix.png"),
-    require("../../../../assets/phoenix.png"),
-    require("../../../../assets/phoenix.png"),
-    require("../../../../assets/phoenix.png"),
+    require("../../../../../assets/phoenix.png"),
+    require("../../../../../assets/phoenix.png"),
+    require("../../../../../assets/phoenix.png"),
+    require("../../../../../assets/phoenix.png"),
+    require("../../../../../assets/phoenix.png"),
 ];
 
 const BAR_H = Platform.select({ web: 500, default: 350 });
 
-export default function AppBar({app, horizontal=true}) {
+export default function AppBarCore({app, horizontal=true}) {
     const styles = horizontal ? stylesHorizontal : stylesVertical;
     const dir = horizontal ? 'row' : 'column-reverse';
-    // if (vertical)
+
     return (
         <View style={[styles.wrap, { flexDirection: dir }]} >
             <Pressable onPress={() => app.view.go("myday")}>
-                <Image source={require("../../../../assets/goal.png")} style={styles.Image} contentFit="contain"
+                <Image source={require("../../../../../assets/goal.png")} style={styles.Image} contentFit="contain"
                        transition={300}/>
             </Pressable>
             <Pressable onPress={() => app.view.go("strategy")}>
-                <Image source={require("../../../../assets/strategy.png")} style={styles.Image} contentFit="contain"
+                <Image source={require("../../../../../assets/strategy.png")} style={styles.Image} contentFit="contain"
                        transition={300}/>
             </Pressable>
-            <Image source={require("../../../../assets/phoenix.png")} style={styles.ImageMain} contentFit="contain"
+            <Image source={require("../../../../../assets/phoenix.png")} style={styles.ImageMain} contentFit="contain"
                    transition={300}/>
-            <Image source={require("../../../../assets/habit.png")} style={styles.Image} contentFit="contain"
+            <Image source={require("../../../../../assets/habit.png")} style={styles.Image} contentFit="contain"
                    transition={300}/>
 
-            <Image source={require("../../../../assets/timeline.png")} style={styles.Image} contentFit="contain"
+            <Image source={require("../../../../../assets/timeline.png")} style={styles.Image} contentFit="contain"
                    transition={300}/>
         </View>
     )
@@ -47,7 +47,7 @@ const stylesHorizontal = StyleSheet.create({
         justifyContent: "center",
         position: "absolute",
         flexDirection: "row",
-        bottom: Platform.select({web: 30, default: 60}),
+        bottom: Platform.select({web: 30, default: 10}),
         zIndex: 1000,
         borderRadius: Platform.select({web: 30, default: 20}),
         borderColor: "#FFFFFF",

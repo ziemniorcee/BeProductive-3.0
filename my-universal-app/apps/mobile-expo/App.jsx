@@ -7,6 +7,7 @@ import {StatusBar} from "react-native";
 
 const app = createApp();
 
+
 export default function App() {
     const [view, setView] = React.useState(app.view.current());
     React.useEffect(() => {
@@ -17,7 +18,6 @@ export default function App() {
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider style={{ flex: 1 }}>
-            <StatusBar hidden  />
             <ScreenRouter view={view} app={app} />
         </SafeAreaProvider>
         </GestureHandlerRootView>

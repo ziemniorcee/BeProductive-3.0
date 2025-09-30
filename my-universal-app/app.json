@@ -23,7 +23,7 @@
       },
       "package": "com.anonymous.myuniversalapp"
     },
-    "androidStatusBar": { "translucent": true, "backgroundColor": "#000000" },
+    "androidStatusBar": {  "hidden": true, "translucent": true, "backgroundColor": "#000000" },
     "web": {
       "bundler": "metro"
     },
