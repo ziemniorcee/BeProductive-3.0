@@ -15,6 +15,7 @@ export default function App() {
         app.start();
         return off;
     }, []);
+
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider style={{ flex: 1 }}>

@@ -15,14 +15,21 @@ const BAR_H = Platform.select({ web: 500, default: 350 });
 export default function AppBarCore({app, horizontal=true}) {
     const styles = horizontal ? stylesHorizontal : stylesVertical;
     const dir = horizontal ? 'row' : 'column-reverse';
+    console.log()
+    const currentView = app.view.current().screen;
 
     return (
         <View style={[styles.wrap, { flexDirection: dir }]} >
-            <Pressable onPress={() => app.view.go("myday")}>
+            <Pressable onPress={() => {
+                if (currentView !== 'myday') app.view.go("myday");
+            }}>
                 <Image source={require("../../../../../assets/goal.png")} style={styles.Image} contentFit="contain"
                        transition={300}/>
             </Pressable>
-            <Pressable onPress={() => app.view.go("strategy")}>
+            <Pressable onPress={() => {
+                console.log(currentView)
+                if (currentView !== 'strategy') app.view.go("strategy");
+            }}>
                 <Image source={require("../../../../../assets/strategy.png")} style={styles.Image} contentFit="contain"
                        transition={300}/>
             </Pressable>

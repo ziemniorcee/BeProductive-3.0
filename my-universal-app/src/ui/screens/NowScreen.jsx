@@ -1,5 +1,5 @@
 import React from "react";
-import ScreenCore from "../components/todo/common/ScreenCore";
+import TodoCore from "../components/todo/common/TodoCore";
 
 export default function InboxScreen({app}) {
     const [state, setState] = React.useState(() => app.services.myday.get());
@@ -16,7 +16,7 @@ export default function InboxScreen({app}) {
     const {goals = [], loading = true} = state;
 
     return (
-        <ScreenCore app={app} type={"Now"} goals={goals} loading={loading} state={state}/>
+        <TodoCore app={app} type={"Now"} goals={goals} loading={loading} state={state}/>
     )
 }
 

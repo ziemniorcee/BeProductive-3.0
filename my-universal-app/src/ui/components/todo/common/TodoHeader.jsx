@@ -8,8 +8,8 @@ function getMonthNameFromISO(iso) {
 }
 
 function getTitle(type, date = null) {
-    if (type === "Day") return date;
-    else if (type === "Month") return getMonthNameFromISO(date);
+    if (type === "Day") return "Day";
+    else if (type === "Month") return "Month";
     else return type;
 }
 
@@ -31,6 +31,8 @@ export default function TodoHeader({type, app, date = null}) {
         return () => clearTimeout(t); // reset if reopened or unmounted
     }, [mobileHeaderOpen]);
 
+
+    let currentDate = new Date();
 
     return (
         <View style={styles.header}>
@@ -82,7 +84,7 @@ export default function TodoHeader({type, app, date = null}) {
                         <Image source={ICONS["Now"]} style={styles.headerOptionImageRight} contentFit="contain"
                                transition={300}/>
                     </Pressable>
-                    <Pressable onPress={() => app.view.go("month")}>
+                    <Pressable onPress={() => app.view.go("month", {date: new Date().toISOString()})}>
                         <Image source={ICONS["Day"]} style={styles.headerOptionImageRight} contentFit="contain"
                                transition={300}/>
                     </Pressable>

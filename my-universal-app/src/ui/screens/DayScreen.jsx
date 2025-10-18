@@ -1,5 +1,5 @@
 import React from "react";
-import ScreenCore from "../components/todo/common/ScreenCore";
+import TodoCore from "../components/todo/common/TodoCore";
 
 export default function DayScreen({app, date}) {
     const [state, setState] = React.useState(() => app.services.myday.get());
@@ -21,6 +21,6 @@ export default function DayScreen({app, date}) {
 
     const {goals = [], loading = true, error} = state;
     return (
-        <ScreenCore app={app} type={"Day"} date={date ?? iso} goals={goals} loading={loading} state={state}/>
+        <TodoCore app={app} type={"Day"} date={date ?? iso} goals={goals} loading={loading} state={state}/>
     )
 }

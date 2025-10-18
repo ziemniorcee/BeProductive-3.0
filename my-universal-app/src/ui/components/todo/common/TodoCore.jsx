@@ -10,7 +10,7 @@ import EditTask from "../edit/EditTask";
 import React from "react";
 import MyDaySetup from "../myDaySetup/MyDaySetup";
 
-export default function ScreenCore({app, type, date, goals, loading, state}) {
+export default function TodoCore({app, type, date, goals, loading, state}) {
     const {height} = useWindowDimensions();
     const insets = useSafeAreaInsets();
     const nativeMaxH = Math.max(0, height - 130 - insets.top - insets.bottom);

@@ -7,6 +7,9 @@ import {makeIconsRepo} from "../../data/storage/iconsRepo";
 import {makeMyDayRepo} from "../../data/myDayRepo";
 import {MyDayStore} from "../state/MyDayStore";
 import MyDayService from "./MyDayService";
+import {makeStrategyRepo} from "../../data/strategyRepo";
+import {StrategyService} from "./StrategyService";
+import {StrategyStore} from "../state/StrategyStore";
 
 export class AppServices {
     constructor({ http, storage }) {
@@ -20,7 +23,16 @@ export class AppServices {
 
         const mydayRepo = makeMyDayRepo({ http });
         const mydayStore = new MyDayStore({ repo: mydayRepo });
-        this.myday = new MyDayService({ store: mydayStore, repo: mydayRepo });
+        this.myday = new MyDayService({
+            store: mydayStore,
+            repo: mydayRepo
+        });
 
+        const strategyRepo = makeStrategyRepo({ http });
+        const strategyStore = new StrategyStore({ repo: strategyRepo });
+        this.strategy = new StrategyService({
+            store: strategyStore,
+            repo: strategyRepo,
+        })
     }
 }

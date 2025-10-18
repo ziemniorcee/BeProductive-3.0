@@ -1,5 +1,5 @@
 import React from "react";
-import ScreenCore from "../components/todo/common/ScreenCore";
+import TodoCore from "../components/todo/common/TodoCore";
 import {MyDayProvider} from "../context/MyDayContext";
 import {FlatList, Platform, Pressable, StyleSheet, Text, View} from "react-native";
 import {Image} from "expo-image";
@@ -11,10 +11,30 @@ import EditTask from "../components/todo/edit/EditTask";
 import {SafeAreaView} from "react-native-safe-area-context";
 import MonthCalendar from "../components/todo/month/MonthCalendar";
 
-export default function MonthScreen({app}) {
+function addMonths(date, delta) {
+    console.log("CHUUj")
+
+    const y = date.getFullYear();
+    const m = date.getMonth() + delta;
+    const d = date.getDate();
+    const firstOfTarget = new Date(y, m, 1);
+    const daysInTarget = new Date(firstOfTarget.getFullYear(), firstOfTarget.getMonth() + 1, 0).getDate();
+    return new Date(firstOfTarget.getFullYear(), firstOfTarget.getMonth(), Math.min(d, daysInTarget));
+}
+
+function nextMonth(now)   { return addMonths(now, +1); }
+function prevMonth(now)   { return addMonths(now, -1); }
+
+export default function MonthScreen({app, date=null}) {
     const [state, setState] = React.useState(() => app.services.myday.get());
-    const now = new Date();
+
+    const now = date ? new Date(date) : new Date();
     const pad = n => String(n).padStart(2, '0');
+
+    const MONTHS_EN = ["December",
+        "January","February","March","April","May","June",
+        "July","August","September","October","November"
+    ];
 
     React.useEffect(() => {
         const unsub = app.services.myday.subscribe(next => setState({...next})); // new ref
@@ -46,7 +66,16 @@ export default function MonthScreen({app}) {
                 </View>
                 <SafeAreaView style={styles.safe} edges={["top"]}>
                     <TodoHeader type="Month" app={app} date={toISODate(y, m, 1)}/>
-                    <AppBar/>
+                    <View style={styles.row}>
+                        <Pressable onPress={() => app.view.go("month", { date: prevMonth(now) })}>
+                            <Image source={require("../../../assets/common/arrow0.png")} style={styles.arrow} />
+                        </Pressable>
+                        <Text style={styles.title}>{MONTHS_EN[m]} {y}</Text>
+                        <Pressable onPress={() => app.view.go("month", { date:  nextMonth(now)})}>
+                            <Image source={require("../../../assets/common/arrow1.png")} style={styles.arrow} />
+                        </Pressable>
+                    </View>
+                    <AppBar app={app}/>
                     <View style={{ flex: 1, minHeight: 0 }}>
                         <MonthCalendar
                             app={app}
@@ -80,4 +109,7 @@ const styles = StyleSheet.create({
     safe: {
         flex: 1,
     },
+    row: { flexDirection: 'row', alignItems: 'center', gap:16, justifyContent: 'center' },
+    arrow: { width: 20, height: 20 },
+    title: { fontSize: 18, fontWeight: '600', color: '#fff' },
 })
