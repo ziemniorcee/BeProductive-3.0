@@ -45,3 +45,10 @@ export const TASK_TYPES = Object.freeze([
 export const taskTypeName = (lvl) => TASK_TYPES[lvl]?.name ?? "No type";
 export const taskTypeColor = (lvl) => TASK_TYPES[lvl]?.color ?? "#FFFFFF";
 export const taskTypeIcon = (lvl) => TASK_TYPES[lvl]?.icon ?? null;
+
+export const POINT_TYPES = Object.freeze([
+    {type: 0, name: "Stage"},
+    {type: 1, name: "Phase"},
+])
+
+export const pointTypeName = (lvl) => POINT_TYPES[lvl]?.name ?? "No type";

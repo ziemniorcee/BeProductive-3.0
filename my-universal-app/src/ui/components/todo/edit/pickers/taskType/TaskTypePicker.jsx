@@ -12,7 +12,6 @@ import {
 import PickerCore from "../common/PickerCore";
 
 export default function TaskTypePicker({ app, taskType }) {
-
     let currentColor = taskTypeColor(taskType);
     let currentName = taskTypeName(taskType)
     let currentIcon = taskTypeIcon(taskType);

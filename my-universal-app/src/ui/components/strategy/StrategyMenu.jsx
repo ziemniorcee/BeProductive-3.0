@@ -1,7 +1,9 @@
 import {useState} from "react";
 import {Text, View, StyleSheet, Image, Pressable} from "react-native";
+import {useStrategy} from "../../context/StrategyContext";
 
 export default function GalaxyMenu({app}) {
+    const {openAddNewPoint} = useStrategy();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     return (
@@ -30,7 +32,7 @@ export default function GalaxyMenu({app}) {
                             <Text style={styles.text}>Add connection</Text>
                         </View>
                     </Pressable>
-                    <Pressable style={styles.menuListButton} onPress={() => console.log("Add point")}>
+                    <Pressable style={styles.menuListButton} onPress={() => openAddNewPoint()}>
                         <Image source={require("../../../../assets/plus.png")} style={styles.menuMore} />
                         <View style={styles.menuListButtonName}>
                             <Text style={styles.text}>Add point</Text>

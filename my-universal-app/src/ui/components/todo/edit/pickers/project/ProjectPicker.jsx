@@ -17,7 +17,6 @@ export default function ProjectPicker({ app, id }) {
     let label = "Project"
 
     const allProjects = [noneProject, ...src ];
-
     return (
         <EditPicker label={label} current={current}>
             {({ closeMenu }) => (

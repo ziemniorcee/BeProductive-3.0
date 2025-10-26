@@ -15,7 +15,6 @@ const BAR_H = Platform.select({ web: 500, default: 350 });
 export default function AppBarCore({app, horizontal=true}) {
     const styles = horizontal ? stylesHorizontal : stylesVertical;
     const dir = horizontal ? 'row' : 'column-reverse';
-    console.log()
     const currentView = app.view.current().screen;
 
     return (
@@ -27,7 +26,6 @@ export default function AppBarCore({app, horizontal=true}) {
                        transition={300}/>
             </Pressable>
             <Pressable onPress={() => {
-                console.log(currentView)
                 if (currentView !== 'strategy') app.view.go("strategy");
             }}>
                 <Image source={require("../../../../../assets/strategy.png")} style={styles.Image} contentFit="contain"

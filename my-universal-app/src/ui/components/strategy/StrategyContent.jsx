@@ -283,7 +283,6 @@ const projectImage = (a0, a1, i, color, title, icon) => {
         </RNSVG.G>
     );
 };
-console.log("rerender StrategyContent");
 
 function StrategyContent() {
     const projectsCounter = 5;

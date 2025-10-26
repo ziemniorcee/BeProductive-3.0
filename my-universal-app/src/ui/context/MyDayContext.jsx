@@ -14,10 +14,6 @@ export function MyDayProvider({ app, children }) {
         [app]
     );
 
-    const patchNewTask = React.useCallback(
-        (change) => app.services.myday.patchNewtask(change),
-        [app]
-    );
 
     const onToggleMain = React.useCallback((taskId, checked) =>
         app.services.myday.toggleMainCheck(taskId, checked), [app]);
@@ -29,7 +25,7 @@ export function MyDayProvider({ app, children }) {
         app.services.myday.openEdit(taskId), [app]);
 
     return (
-        <Ctx.Provider value={{ state, onToggleMain, onToggleStep, openEdit, patchEdit, patchNewTask }}>
+        <Ctx.Provider value={{ state, onToggleMain, onToggleStep, openEdit, patchEdit }}>
             {children}
         </Ctx.Provider>
     );

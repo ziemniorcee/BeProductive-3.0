@@ -38,7 +38,6 @@ export default function EditTaskPanelMobile({app}) {
 
     const {state, patchEdit} = useMyDay(app);
     const task = state.editTask;
-    console.log(task)
     const [note, setNote] = React.useState(task.note ?? "");
     const importanceColor = React.useMemo(() => priorityColor(task.importance), [task.importance]);
     const changeName = React.useCallback((t) => patchEdit({name: t}), [patchEdit]);

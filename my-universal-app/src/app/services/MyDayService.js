@@ -61,12 +61,10 @@ export default class MyDayService {
     }
 
     patchEdit = (change) => {
-        console.log('patch')
         this.store.patchEdit(change)
     }
 
     closeEdit = async (commit = true) => {
-        console.log("TOTO")
         const {editTask, editOriginal, editType} = this.store.state;
         if (!editTask) return this.store.closeEdit();
         if (!commit) return this.store.closeEdit();

@@ -20,12 +20,14 @@ export function createApp(opts = {}) {
         const authed = await app.services.auth.is_token_valid();
         if (!authed) { app.view.go("login"); return; }
 
-        app.view.go("strategy");
-        // app.view.go("myday"); //normal state
 
         // fire loads without screen changes
-        void app.services.categories.reload();
-        void app.services.projects.reload();
+        await app.services.categories.reload();
+        await app.services.projects.reload();
+
+        app.view.go("myday"); //normal state
+        // app.view.go("strategy");
+
         //
         // try {
         //     await Promise.all([

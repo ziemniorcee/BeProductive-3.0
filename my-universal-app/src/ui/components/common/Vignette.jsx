@@ -52,7 +52,6 @@ export default class Vignette extends PureComponent {
 
     close = () => {
         if (this.allowClose) {
-            console.log("TERA")
             this.props.onClose();
         }
     };

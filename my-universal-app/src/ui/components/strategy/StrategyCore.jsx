@@ -10,10 +10,13 @@ import Animated, {
 import * as RNSVG from "react-native-svg";
 import AppBar from "../common/appBar/AppBar";
 import GalaxyMenu from "./StrategyMenu";
+import AddNewPoint from "./newPoint/AddNewPoint.jsx";
+import {StrategyProvider} from "../../context/StrategyContext";
 
 const TILE = 1024;
 const MAX_SCALE = 6;
 const MIN_ZOOM = 0.1;
+const AnimatedG = Animated.createAnimatedComponent(RNSVG.G);
 
 export function clampW(v, lo = 0.1, hi = 6) {
     'worklet';
@@ -25,31 +28,29 @@ export function ensureFiniteW(v, d = 0) {
     return Number.isFinite(v) ? v : d;
 }
 
-export default function StrategyCore({app, children}) {
+export default function StrategyCore({app, state,children}) {
+    const {width, height} = useWindowDimensions();
     const isWeb = Platform.OS === 'web';
     const scale = useSharedValue(1.4);
-    const tx = useSharedValue(200);
-    const ty = useSharedValue(200);
+    const tx = useSharedValue(0);
+    const ty = useSharedValue(0);
     const pinchInited = useSharedValue(0);
     const s0 = useSharedValue(1);
     const tx0 = useSharedValue(0);
     const ty0 = useSharedValue(0);
     const wx0 = useSharedValue(0);
     const wy0 = useSharedValue(0);
-    const AnimatedG   = Animated.createAnimatedComponent(RNSVG.G);
-    const {width, height} = useWindowDimensions();
-
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     const camProps = useAnimatedProps(() => {
         'worklet';
-        const s  = clampW(ensureFiniteW(scale.value, MIN_ZOOM));
-        const e  = ensureFiniteW(tx.value, 0) * s;
-        const f  = ensureFiniteW(ty.value, 0) * s;
+        const s = clampW(ensureFiniteW(scale.value, MIN_ZOOM));
+        const e = ensureFiniteW(tx.value, 0) * s;
+        const f = ensureFiniteW(ty.value, 0) * s;
         if (isWeb) {
-            return { transform: `matrix(${s} 0 0 ${s} ${e} ${f})` };
+            return {transform: `matrix(${s} 0 0 ${s} ${e} ${f})`};
         } else {
-            return { matrix: [s, 0, 0, s, e, f] };
+            return {matrix: [s, 0, 0, s, e, f]};
         }
 
     });
@@ -57,26 +58,31 @@ export default function StrategyCore({app, children}) {
     const clampScale = s => Math.min(MAX_SCALE, Math.max(MIN_ZOOM, s));
 
     React.useEffect(() => {
-        // This effect now uses the stable, initial dimensions
+        console.log("XDDD")
         const s = clampW(Math.min(width / TILE, height / TILE) * 0.9);
         scale.value = s;
-        tx.value = width  / (2 * s);
+        tx.value = width / (2 * s);
         ty.value = height / (2 * s);
     }, [width, height]);
+
+
 
     const panStartX = useSharedValue(0);
     const panStartY = useSharedValue(0);
     const pinch = Gesture.Pinch()
-        .onBegin(() => { 'worklet'; pinchInited.value = 0; })
+        .onBegin(() => {
+            'worklet';
+            pinchInited.value = 0;
+        })
         .onUpdate(e => {
             'worklet';
             if ((e.numberOfPointers ?? 0) < 2) return;
-            const px = isWeb ? Math.min(Math.max(e.focalX, 0), width)  : width  * 0.5;
+            const px = isWeb ? Math.min(Math.max(e.focalX, 0), width) : width * 0.5;
             const py = isWeb ? Math.min(Math.max(e.focalY, 0), height) : height * 0.5;
 
             if (!pinchInited.value) {
                 pinchInited.value = 1;
-                s0.value  = clampW(ensureFiniteW(scale.value, 1));
+                s0.value = clampW(ensureFiniteW(scale.value, 1));
                 tx0.value = ensureFiniteW(tx.value, 0);
                 ty0.value = ensureFiniteW(ty.value, 0);
                 wx0.value = px / s0.value - tx0.value;
@@ -89,13 +95,22 @@ export default function StrategyCore({app, children}) {
             tx.value = px / s1 - wx0.value;
             ty.value = py / s1 - wy0.value;
         })
-        .onFinalize(() => { 'worklet'; pinchInited.value = 0; });
+        .onFinalize(() => {
+            'worklet';
+            pinchInited.value = 0;
+        });
 
     const pan = Gesture.Pan().minPointers(1).maxPointers(1)
         .simultaneousWithExternalGesture(pinch)
-        .onBegin(e => { 'worklet'; if ((e.numberOfPointers ?? 0) !== 1) return;
-            panStartX.value = tx.value; panStartY.value = ty.value; })
-        .onUpdate(e => { 'worklet'; if ((e.numberOfPointers ?? 0) !== 1 || pinchInited.value) return;
+        .onBegin(e => {
+            'worklet';
+            if ((e.numberOfPointers ?? 0) !== 1) return;
+            panStartX.value = tx.value;
+            panStartY.value = ty.value;
+        })
+        .onUpdate(e => {
+            'worklet';
+            if ((e.numberOfPointers ?? 0) !== 1 || pinchInited.value) return;
             const s = Math.max(scale.value, 0.1);
             tx.value = panStartX.value + e.translationX / s;
             ty.value = panStartY.value + e.translationY / s;
@@ -127,23 +142,28 @@ export default function StrategyCore({app, children}) {
     }, [isWeb, onWheelCore]);
 
     return (
-        <GestureHandlerRootView style={styles.fill} collapsable={false}>
-            <GestureDetector gesture={Gesture.Simultaneous(pan, pinch)}>
-                <Animated.View
-                    ref={isWeb ? containerRef : null}
-                    style={[StyleSheet.absoluteFill, isWeb && { touchAction:'none', userSelect:'none' }]}
-                >
-                    <RNSVG.Svg width={width} height={height} preserveAspectRatio="none">
-                        <AnimatedG animatedProps={camProps}>
-                            {children}
-                        </AnimatedG>
-                    </RNSVG.Svg>
+        <StrategyProvider app={app}>
+            <GestureHandlerRootView style={styles.fill} collapsable={false}>
+                <GestureDetector gesture={Gesture.Simultaneous(pan, pinch)}>
+                    <Animated.View
+                        ref={isWeb ? containerRef : null}
+                        style={[StyleSheet.absoluteFill, isWeb && {touchAction: 'none', userSelect: 'none'}]}
+                    >
+                        <RNSVG.Svg width={width} height={height} preserveAspectRatio="none">
+                            <AnimatedG animatedProps={camProps}>
+                                {children}
+                            </AnimatedG>
+                        </RNSVG.Svg>
 
-                    <GalaxyMenu/>
-                    <AppBar app={app} horizontal={isWeb}/>
-                </Animated.View>
-            </GestureDetector>
-        </GestureHandlerRootView>
+                        <GalaxyMenu/>
+                        <AppBar app={app} horizontal={isWeb}/>
+                        {state.addNewPointOpen && (
+                            <AddNewPoint app={app} close={() => app.services.strategy.closeAddNewPoint()}/>
+                        )}
+                    </Animated.View>
+                </GestureDetector>
+            </GestureHandlerRootView>
+        </StrategyProvider>
     );
 }
 
@@ -154,8 +174,5 @@ const styles = StyleSheet.create({
     block: {backgroundColor: "red", height: 50, width: 100},
 
 
-
-    menuListButtonName: {
-
-    }
+    menuListButtonName: {}
 });

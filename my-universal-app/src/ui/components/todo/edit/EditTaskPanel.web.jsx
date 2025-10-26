@@ -19,6 +19,7 @@ export default function EditTaskPanelWeb({app}) {
     const changeName = React.useCallback((t) => {
         patchEdit({name: t});
     }, [patchEdit]);
+
     const importanceColor = React.useMemo(() => priorityColor(task.importance), [task.importance]);
     const LINE_H = 30;
     const MAX_LINES = 12;

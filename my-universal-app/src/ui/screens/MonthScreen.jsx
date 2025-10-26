@@ -12,7 +12,6 @@ import {SafeAreaView} from "react-native-safe-area-context";
 import MonthCalendar from "../components/todo/month/MonthCalendar";
 
 function addMonths(date, delta) {
-    console.log("CHUUj")
 
     const y = date.getFullYear();
     const m = date.getMonth() + delta;

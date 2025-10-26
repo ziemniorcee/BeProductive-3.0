@@ -6,6 +6,7 @@ import StrategyContent from "../components/strategy/StrategyContent";
 import {Platform} from "react-native";
 
 export default function StrategyScreen({app}) {
+    const [state, setState] = React.useState(() => app.services.strategy.get());
     const isWeb = Platform.OS === "web";
 
     React.useEffect(() => {
@@ -15,8 +16,16 @@ export default function StrategyScreen({app}) {
             ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
     }, []);
 
+    React.useEffect(() => {
+        const unsub = app.services.strategy.subscribe(nextState => {
+            setState({...nextState});
+        });
+
+        return () => unsub?.();
+    }, [app]);
+
     return (
-        <StrategyCore app={app}>
+        <StrategyCore app={app} state={state}>
             <StrategyContent app={app}/>
         </StrategyCore>
     );

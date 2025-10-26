@@ -5,6 +5,7 @@ export default function DayScreen({app, date}) {
     const [state, setState] = React.useState(() => app.services.myday.get());
 
     React.useEffect(() => {
+
         const unsub = app.services.myday.subscribe(next => setState({...next})); // new ref
 
         const pad = n => String(n).padStart(2, '0');

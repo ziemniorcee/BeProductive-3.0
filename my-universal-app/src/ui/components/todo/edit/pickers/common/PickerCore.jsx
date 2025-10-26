@@ -2,16 +2,30 @@ import {FlatList, Platform, StyleSheet, View} from "react-native";
 import Pill from "../../../../common/Pill";
 import React from "react";
 import {useMyDay} from "../../../../../context/MyDayContext";
+import {useStrategy} from "../../../../../context/StrategyContext";
 
 export default function PickerCore({app, src, type, onPick}){
     const [open, setOpen] = React.useState(false);
-    const {patchEdit} = useMyDay();
+    const currentScreen = app.view.current().screen
+
+    let pickerChangeFunction = null
+    if (currentScreen === "myday"){
+        const {patchEdit} = useMyDay();
+
+        pickerChangeFunction = patchEdit
+    }
+    else if (currentScreen === "strategy"){
+        const {patchNewPoint} = useStrategy();
+
+        pickerChangeFunction = patchNewPoint
+    }
+
 
     const select = React.useCallback((change) => {
         const id = change.publicId ?? change.id ?? change.level ?? change.type ?? null;
-        patchEdit({[type]: id});
+        pickerChangeFunction({[type]: id});
         onPick?.(change);
-    }, [patchEdit, type, onPick]);
+    }, [pickerChangeFunction, type, onPick]);
 
     const items = React.useMemo(() => {
         return Array.isArray(src) ? src : Object.values(src ?? {});

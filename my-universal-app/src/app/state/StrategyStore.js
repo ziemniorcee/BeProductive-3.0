@@ -7,6 +7,8 @@ export class StrategyStore {
         goals: [],
         loading: false,
         error: null,
+        addNewPointOpen: false,
+        addNewPoint: {projectPublicId: null, pointType: null},
     }
 
     constructor({repo}) {
@@ -54,5 +56,21 @@ export class StrategyStore {
             this.state = {...this.state, loading: false, error: String(e)};
         }
         this.#emit();
+    }
+
+    patchNewPoint = (change) => {
+        const cur = this.state.addNewPoint ?? {};
+        const next = {...cur, ...change};          // replace object
+        this.state = {...this.state, addNewPoint: next}; // replace state
+        console.log("EMIIT")
+        this.#emit();
+    };
+
+    openAddNewPoint = () => {
+        this._set({addNewPointOpen: true});
+    }
+
+    closeAddNewPoint = () => {
+        this._set({addNewPointOpen: false, addNewPoint: {projectPublicId: null, pointType: null}});
     }
 }

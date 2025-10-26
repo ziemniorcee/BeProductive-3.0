@@ -4,11 +4,8 @@ import {PRIORITY, priorityColor, priorityName} from "../../../../../theme/tokens
 import PickerCore from "../common/PickerCore";
 
 export default function ImportancePicker({ app, importance }) {
-    let task_importance = 2
-    if (importance !== null) task_importance = importance;
-
-    let currentColor = priorityColor(task_importance);
-    let currentName = priorityName(task_importance)
+    let currentColor = priorityColor(importance ?? 2);
+    let currentName = priorityName(importance ?? 2)
     let current = {color: currentColor, name: currentName};
     let src = PRIORITY
     let type = "importance"
