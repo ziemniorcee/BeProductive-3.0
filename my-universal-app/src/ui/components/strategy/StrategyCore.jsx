@@ -58,7 +58,6 @@ export default function StrategyCore({app, state,children}) {
     const clampScale = s => Math.min(MAX_SCALE, Math.max(MIN_ZOOM, s));
 
     React.useEffect(() => {
-        console.log("XDDD")
         const s = clampW(Math.min(width / TILE, height / TILE) * 0.9);
         scale.value = s;
         tx.value = width / (2 * s);

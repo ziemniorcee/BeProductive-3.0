@@ -11,11 +11,13 @@ export class StrategyService {
     patchNewPoint(change) {
         this.store.patchNewPoint(change)
     }
+
     openAddNewPoint() {
         this.store.openAddNewPoint();
     }
 
-    closeAddNewPoint() {
+    async closeAddNewPoint() {
+        await this.repo.closeNewPoint(this.store.state.addNewPoint);
         this.store.closeAddNewPoint();
     }
 }

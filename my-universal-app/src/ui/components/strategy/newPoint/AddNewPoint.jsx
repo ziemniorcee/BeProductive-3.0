@@ -9,13 +9,23 @@ export default function AddNewPoint({app, close}) {
     const { state, patchNewPoint } = useStrategy();
     const [draftPoint, setDraftPoint] = useState(state.addNewPoint);
 
+
     const handleSave = () => {
-        patchNewPoint(draftPoint);
+        const allKeys = new Set([
+            ...Object.keys(state.addNewPoint),
+            ...Object.keys(draftPoint)
+        ]);
+
+        const combinedPoint = Array.from(allKeys).reduce((acc, key) => {
+            acc[key] = draftPoint[key] ?? state.addNewPoint[key];
+            return acc;
+        }, {});
+
+        patchNewPoint(combinedPoint);
         close(); // Call original close prop
     };
 
     const handleCancel = () => {
-        // Just close without saving
         close();
     };
 

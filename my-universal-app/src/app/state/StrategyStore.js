@@ -8,7 +8,7 @@ export class StrategyStore {
         loading: false,
         error: null,
         addNewPointOpen: false,
-        addNewPoint: {projectPublicId: null, pointType: null},
+        addNewPoint: {projectPublicId: null, pointType: 0},
     }
 
     constructor({repo}) {
@@ -59,10 +59,10 @@ export class StrategyStore {
     }
 
     patchNewPoint = (change) => {
+        console.log(change)
         const cur = this.state.addNewPoint ?? {};
         const next = {...cur, ...change};          // replace object
         this.state = {...this.state, addNewPoint: next}; // replace state
-        console.log("EMIIT")
         this.#emit();
     };
 
