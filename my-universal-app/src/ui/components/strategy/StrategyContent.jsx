@@ -4,6 +4,7 @@ import {SvgXml} from 'react-native-svg';
 import Node from "./Node";
 import {cleanSvgXml} from "../../../util/svgClean";
 import Edge from "./Edge";
+import {StyleSheet, Text, View} from "react-native";
 
 const sep = 15;
 const CIRCLE_CENTER = {R: 140, D: 200};
@@ -200,15 +201,13 @@ const pair = (a, colPrev, colCurr, keyBase) => {
 };
 
 
-const midRadial = (a0, a1, i, color) => {
+const midRadial = (a0, a1, i, color, tapCoordinates, tapHandledRef) => {
     const am = (a0 + a1) / 2;
-
     return (
         <RNSVG.G key={`midRadial-${i}`}>
-            {generate(color, am)}
+            {generate(color, am, tapCoordinates, tapHandledRef)}
         </RNSVG.G>
-        //generate tree
-    )
+    );
 };
 
 const rot = ({x, y}, t) => ({
@@ -216,31 +215,35 @@ const rot = ({x, y}, t) => ({
     y: x * Math.sin(t) + y * Math.cos(t)
 });
 
-// if "0° at top", compensate: top is -π/2 in standard math
 const rotTop = (p, am) => rot(p, am + Math.PI / 2);
 
-const generate = (color, am) => {
+const generate = (color, am, tapCoordinates, tapHandledRef) => {
     const out = [];
     for (const n of NODES) {
         const start0 = {x: n.rel_x, y: n.rel_y};
         const start = rotTop(start0, am);
 
-
         for (const c of (n.children ?? [])) {
             const childId = typeof c === 'object' ? c.id : c;
             const child = NODES.find(x => x.id === childId) ?? NODES[childId];
             if (!child) continue;
-
             const end0 = {x: child.rel_x, y: child.rel_y};
             const end = rotTop(end0, am);
-
             out.push(
                 <Edge key={`edge-${n.id}-${childId}`} start={start} end={end}/>
             );
         }
 
         out.push(
-            <Node key={`node-${n.id}`} start={start} color={color} title={n.title}/>
+            <Node
+                key={`node-${n.id}`}
+                start={start}
+                color={color}
+                title={n.title}
+                press={() => console.log(`Tapped node ${n.id}: ${n.title}`)}
+                tapCoordinates={tapCoordinates}
+                tapHandledRef={tapHandledRef}
+            />
         );
     }
     return out;
@@ -251,13 +254,13 @@ const projectImage = (a0, a1, i, color, title, icon) => {
     const L = 1000;
     const rC = CIRCLE_CENTER.R;
 
-    const W = 512;           // icon box
-    const FS = 100;          // font size
+    const W = 512;
+    const FS = 100;
     const cx = (rC + L) * Math.cos(am);
     const cy = (rC + L) * Math.sin(am);
 
     return (
-        <RNSVG.G key={`projectImage-${i}`} transform={`translate(${cx - W / 2}, ${cy - W / 2})`}>
+        <RNSVG.G key={`projectImage-${i}`} transform={`translate(${cx - W / 2}, ${cy - W / 2})`} >
             {/* icon */}
             <RNSVG.G transform={`translate(${W / 2}, ${-FS * 0.35})`}>
                 <RNSVG.Text
@@ -273,22 +276,21 @@ const projectImage = (a0, a1, i, color, title, icon) => {
                 </RNSVG.Text>
             </RNSVG.G>
             <SvgXml
-                xml={icon}      // ensure XML has a viewBox and uses fill="currentColor" if you pass color
+                xml={icon}
                 width={W}
                 height={W}
                 color={color}
                 preserveAspectRatio="xMidYMid meet"
             />
-            {/* text ABOVE the icon box */}
         </RNSVG.G>
     );
 };
 
-function StrategyContent() {
+function StrategyContent({ tapCoordinates, tapHandledRef }) {
     const projectsCounter = 5;
     const start = Math.PI / 2 + Math.PI * 2 / projectsCounter * 3;
     return (
-        <>
+        <RNSVG.G>
             {Array.from({length: projectsCounter}, (_, i) => {
                 const a0 = start + i * (2 * Math.PI / projectsCounter);
                 const a1 = a0 + (2 * Math.PI / projectsCounter);
@@ -304,15 +306,24 @@ function StrategyContent() {
             {Array.from({length: projectsCounter}, (_, i) => {
                 const a0 = start + i * (2 * Math.PI / projectsCounter);
                 const a1 = a0 + (2 * Math.PI / projectsCounter);
-                return projectImage(a0, a1, `mid-${i}`, PROJECT_COLORS[i], PROJECT_TITLES[i], ICONS2_CLEAN[i]);
+                return projectImage(a0, a1, `img-${i}`, PROJECT_COLORS[i], PROJECT_TITLES[i], ICONS2_CLEAN[i]);
             })}
 
             {Array.from({length: projectsCounter}, (_, i) => {
                 const a0 = start + i * (2 * Math.PI / projectsCounter);
                 const a1 = a0 + (2 * Math.PI / projectsCounter);
-                return midRadial(a0, a1, `mid-${i}`, COLS_LIGHT[i]);
+                return midRadial(a0, a1, `mid-${i}`, COLS_LIGHT[i], tapCoordinates, tapHandledRef);
             })}
 
+            <Node
+                key={`node-custom`}
+                start={{x:0, y:-700}}
+                color={"red"}
+                title={"new"}
+                press={() => console.log("xdd")}
+                tapCoordinates={tapCoordinates}
+                tapHandledRef={tapHandledRef}
+            />
 
             <RNSVG.Circle cx={0} cy={0} r={CIRCLE_CENTER.R} fill="#000" stroke="#FFF" strokeWidth={4}/>
             <RNSVG.Image
@@ -321,7 +332,7 @@ function StrategyContent() {
                 href={require("../../../../assets/phoenix2.png")}
                 preserveAspectRatio="xMidYMid slice"
             />
-        </>
+        </RNSVG.G>
     )
 }
 

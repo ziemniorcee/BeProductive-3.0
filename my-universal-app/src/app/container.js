@@ -25,8 +25,8 @@ export function createApp(opts = {}) {
         await app.services.categories.reload();
         await app.services.projects.reload();
 
-        app.view.go("myday"); //normal state
-        // app.view.go("strategy");
+        // app.view.go("myday"); //normal state
+        app.view.go("strategy");
 
         //
         // try {

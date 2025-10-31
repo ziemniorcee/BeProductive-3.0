@@ -1,5 +1,5 @@
 // InfiniteGalaxy/InfiniteGalaxySVG.jsx
-import React, {useState} from "react";
+import React, {useEffect, useRef, useState} from "react";
 import {Platform, View, StyleSheet, useWindowDimensions, Text, Image} from "react-native";
 import {Gesture, GestureDetector, GestureHandlerRootView} from "react-native-gesture-handler";
 import Animated, {
@@ -12,6 +12,7 @@ import AppBar from "../common/appBar/AppBar";
 import GalaxyMenu from "./StrategyMenu";
 import AddNewPoint from "./newPoint/AddNewPoint.jsx";
 import {StrategyProvider} from "../../context/StrategyContext";
+import {StrategyTopBanner} from "./StrategyTopBanner";
 
 const TILE = 1024;
 const MAX_SCALE = 6;
@@ -41,7 +42,8 @@ export default function StrategyCore({app, state,children}) {
     const wx0 = useSharedValue(0);
     const wy0 = useSharedValue(0);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-
+    const [tapCoordinates, setTapCoordinates] = useState(null);
+    const tapHandledRef = useRef(null);
     const camProps = useAnimatedProps(() => {
         'worklet';
         const s = clampW(ensureFiniteW(scale.value, MIN_ZOOM));
@@ -64,7 +66,19 @@ export default function StrategyCore({app, state,children}) {
         ty.value = height / (2 * s);
     }, [width, height]);
 
+    const handleTap_JS = (worldX, worldY) => {
+        // Reset the ref. A new tap is starting.
+        // All nodes will compete to fill `closestNodeCallback`.
+        tapHandledRef.current = {
+            x: worldX,
+            y: worldY,
+            closestDist: Infinity,       // Start with infinite distance
+            closestNodeCallback: null, // No winner yet
+        };
 
+        // Set state to trigger re-render, passing coords to children
+        setTapCoordinates({ x: worldX, y: worldY });
+    };
 
     const panStartX = useSharedValue(0);
     const panStartY = useSharedValue(0);
@@ -115,6 +129,37 @@ export default function StrategyCore({app, state,children}) {
             ty.value = panStartY.value + e.translationY / s;
         });
 
+    const tap = Gesture.Tap()
+        .maxDuration(250)
+        .onEnd((event, success) => {
+            'worklet';
+            if (success) {
+                // Convert screen coordinates to world (SVG) coordinates
+                const s = clampW(ensureFiniteW(scale.value, MIN_ZOOM));
+                const worldX = (event.x / s) - ensureFiniteW(tx.value, 0);
+                const worldY = (event.y / s) - ensureFiniteW(ty.value, 0);
+
+                // Call your JS-thread function
+                runOnJS(handleTap_JS)(worldX, worldY);
+            }
+        });
+
+    useEffect(() => {
+        if (tapCoordinates) {
+            setTimeout(() => {
+                const tapData = tapHandledRef.current;
+                if (tapData && tapData.closestNodeCallback) {
+                    console.log('Closest node won, firing callback.');
+                    // Fire the winner's callback
+                    tapData.closestNodeCallback();
+                }
+
+                // Clear the ref data, the tap is fully handled
+                tapHandledRef.current = null;
+            }, 0);
+        }
+    }, [tapCoordinates]);
+
     const onWheelCore = React.useCallback((ev) => {
         const rect = ev.currentTarget.getBoundingClientRect();
         const px = ev.clientX - rect.left;
@@ -143,22 +188,26 @@ export default function StrategyCore({app, state,children}) {
     return (
         <StrategyProvider app={app}>
             <GestureHandlerRootView style={styles.fill} collapsable={false}>
-                <GestureDetector gesture={Gesture.Simultaneous(pan, pinch)}>
+                <GestureDetector gesture={Gesture.Simultaneous(pan, pinch, tap)}>
                     <Animated.View
                         ref={isWeb ? containerRef : null}
                         style={[StyleSheet.absoluteFill, isWeb && {touchAction: 'none', userSelect: 'none'}]}
                     >
-                        <RNSVG.Svg width={width} height={height} preserveAspectRatio="none">
+                        <RNSVG.Svg width={width} height={height} preserveAspectRatio="none" style={StyleSheet.absoluteFill} >
                             <AnimatedG animatedProps={camProps}>
-                                {children}
+                                {React.Children.map(children, child =>
+                                    React.cloneElement(child, { tapCoordinates: tapCoordinates, tapHandledRef: tapHandledRef })
+                                )}
                             </AnimatedG>
                         </RNSVG.Svg>
 
                         <GalaxyMenu/>
                         <AppBar app={app} horizontal={isWeb}/>
+                        <StrategyTopBanner/>
                         {state.addNewPointOpen && (
                             <AddNewPoint app={app} close={() => app.services.strategy.closeAddNewPoint()}/>
                         )}
+
                     </Animated.View>
                 </GestureDetector>
             </GestureHandlerRootView>
