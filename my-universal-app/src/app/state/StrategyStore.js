@@ -5,6 +5,7 @@ export class StrategyStore {
     #subs = new Set()
     state = {
         goals: [],
+        nodes: [],
         loading: false,
         error: null,
         addNewPointOpen: false,
@@ -47,11 +48,12 @@ export class StrategyStore {
         this.state = {...this.state, loading: true, error: null};
         this.#emit();
         try {
+            console.log("load")
+
             let goals = []
             const raw = await this.#repo.strategyGoals(params);
             goals = raw['tasks'];
-
-            this.state = {goals, loading: false, error: null};
+            this.state = {goals, loading: false, error: null, addNewPoint: {projectPublicId: null, pointType: 0}};
         } catch (e) {
             this.state = {...this.state, loading: false, error: String(e)};
         }
@@ -59,7 +61,6 @@ export class StrategyStore {
     }
 
     patchNewPoint = (change) => {
-        console.log(change)
         const cur = this.state.addNewPoint ?? {};
         const next = {...cur, ...change};          // replace object
         this.state = {...this.state, addNewPoint: next}; // replace state

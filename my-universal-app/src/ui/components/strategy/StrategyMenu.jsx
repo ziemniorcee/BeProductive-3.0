@@ -11,6 +11,7 @@ export default function GalaxyMenu({app}) {
         <View
             onMouseEnter={() => setIsMenuOpen(true)}
             onMouseLeave={() => setIsMenuOpen(false)}
+            style={styles.overlay}
         >
             {/* The button no longer needs its own event handlers. */}
             <View style={styles.menuMainButton}>
@@ -87,4 +88,12 @@ const styles = StyleSheet.create({
         paddingRight:20,
     },
     text: {color: "#FFFFFF", fontSize: 20, fontWeight: "bold"},
+    overlay: {
+        position: "absolute",
+        left: 0,
+        bottom: 0,
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+    }
 })

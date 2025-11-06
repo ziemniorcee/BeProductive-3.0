@@ -6,7 +6,7 @@ import {useState} from "react";
 
 export default function AddNewPoint({app, close}) {
     let isWeb = Platform.OS === "web";
-    const { state, patchNewPoint } = useStrategy();
+    const { state, patchNewPoint, projectPositions } = useStrategy();
     const [draftPoint, setDraftPoint] = useState(state.addNewPoint);
 
 
@@ -21,6 +21,17 @@ export default function AddNewPoint({app, close}) {
             return acc;
         }, {});
 
+        const projectId = combinedPoint.projectPublicId;
+        const matchingProject = projectPositions.find(project => project.id === projectId);
+
+        if (matchingProject) {
+            combinedPoint["x"] = matchingProject.x;
+            combinedPoint["y"] = matchingProject.y;
+        } else {
+            console.warn(`Could not find project position for ID: ${projectId}`);
+            combinedPoint["x"] = 0; // Set a default
+            combinedPoint["y"] = 0;
+        }
         patchNewPoint(combinedPoint);
         close(); // Call original close prop
     };

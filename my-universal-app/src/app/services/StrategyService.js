@@ -9,6 +9,7 @@ export class StrategyService {
     load = (params) => this.store.load(params);
 
     patchNewPoint(change) {
+        console.log("ch", change)
         this.store.patchNewPoint(change)
     }
 
@@ -17,6 +18,7 @@ export class StrategyService {
     }
 
     async closeAddNewPoint() {
+        console.log(this.store.state.addNewPoint)
         await this.repo.closeNewPoint(this.store.state.addNewPoint);
         this.store.closeAddNewPoint();
     }

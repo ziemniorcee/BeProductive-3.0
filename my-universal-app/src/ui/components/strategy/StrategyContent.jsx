@@ -1,10 +1,11 @@
 import * as RNSVG from "react-native-svg";
-import React from "react";
+import React, {useEffect, useMemo} from "react";
 import {SvgXml} from 'react-native-svg';
 import Node from "./Node";
 import {cleanSvgXml} from "../../../util/svgClean";
 import Edge from "./Edge";
 import {StyleSheet, Text, View} from "react-native";
+import {useStrategy} from "../../context/StrategyContext";
 
 const sep = 15;
 const CIRCLE_CENTER = {R: 140, D: 200};
@@ -62,9 +63,11 @@ const ICONS2 = [`<svg fill="currentColor" width="800px" height="800px" viewBox="
     `<svg height="800px" width="800px" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 38.427 38.427" xml:space="preserve"> <g> <g> <path style="fill:currentColor;" d="M36.501,32.204c-1.564-1.324-3.673-1.896-5.43-2.887c-2.982-1.691-6.375-3.368-9.061-5.492 c-6.664-5.27-6.313-11.534-5.379-19.234c0.187-1.542-0.278-2.926-1.583-3.861c-1.786-1.28-4.05-0.93-4.512,1.483 c-0.619,3.24,1.31,7.409,1.536,10.708c0.261,3.819-0.133,7.697-1.485,11.289c-0.959,2.547-2.575,5.114-4.321,7.203 c-1.05,1.258-6.88,4.613-4.839,6.575c2.09,2.009,7.67-3.442,9.003-4.79c0.599-0.605,3.845-5.631,5.302-8.421 c0.529-1.014,0.823-1.733,0.666-1.837c0.103,0.068,0.183,0.126,0.242,0.2c2.873,3.598,5.354,7.825,8.822,10.881 c2.332,2.054,5.276,1.676,8.112,1.265C35.38,35.023,39.187,34.477,36.501,32.204z"/> <path style="fill:currentColor;" d="M19.749,18.387c0.57-0.052,1.096-0.284,1.584-0.618c2.598-1.779,5.195-3.573,7.354-5.902 c0.506-0.548,0.971-1.162,1.332-1.815c0.648-1.175,0.445-2.074-0.574-2.959c-0.875-0.759-1.937-1.033-3.062-1.142 c-1.818-0.178-3.195,0.716-3.715,2.452c-0.126,0.422-0.215,0.859-0.286,1.294c-0.256,1.559-0.83,2.986-1.722,4.289 c-0.675,0.988-1.358,1.971-2.017,2.97c-0.108,0.164-0.198,0.341-0.289,0.529C18.209,17.786,18.803,18.473,19.749,18.387z"/> <path style="fill:currentColor;" d="M3.011,15.781c1.296,0.81,1.983,1.954,2.452,3.341c0.177,0.524,0.479,1.113,0.905,1.423 c0.795,0.576,1.719,0.591,2.642,0.127c0.482-0.242,0.879-0.531,1.164-0.908c0.496-0.656,0.387-1.723,0.265-2.138 c-0.075-0.253-0.158-0.502-0.277-0.732c-1.358-2.636-4.129-3.154-6.506-4.246c-0.194-0.089-0.625,0.084-0.807,0.27 C2.143,13.643,2.168,15.254,3.011,15.781z"/> </g> </g> </svg>`,
 ]
 
-const ICONS2_CLEAN = ICONS2.map(cleanSvgXml);
+export const ICONS2_CLEAN = ICONS2.map(cleanSvgXml);
 
-const NODES = [
+
+
+export const NODES_CONST = [
     {
         id: 0,
         rel_x: 0,
@@ -201,11 +204,11 @@ const pair = (a, colPrev, colCurr, keyBase) => {
 };
 
 
-const midRadial = (a0, a1, i, color, tapCoordinates, tapHandledRef) => {
+const midRadial = (app, a0, a1, i, color, tapCoordinates, tapHandledRef, nodes) => {
     const am = (a0 + a1) / 2;
     return (
         <RNSVG.G key={`midRadial-${i}`}>
-            {generate(color, am, tapCoordinates, tapHandledRef)}
+            {generate(app, color, am, tapCoordinates, tapHandledRef, nodes)}
         </RNSVG.G>
     );
 };
@@ -217,30 +220,34 @@ const rot = ({x, y}, t) => ({
 
 const rotTop = (p, am) => rot(p, am + Math.PI / 2);
 
-const generate = (color, am, tapCoordinates, tapHandledRef) => {
+const generate = (app, color, am, tapCoordinates, tapHandledRef, nodes) => {
     const out = [];
-    for (const n of NODES) {
-        const start0 = {x: n.rel_x, y: n.rel_y};
+    for (const n of nodes) {
+        const start0 = {x: n.x, y: n.y};
         const start = rotTop(start0, am);
 
         for (const c of (n.children ?? [])) {
-            const childId = typeof c === 'object' ? c.id : c;
-            const child = NODES.find(x => x.id === childId) ?? NODES[childId];
+            const childId = typeof c === 'object' ? c.publicId : c;
+            const child = nodes.find(x => x.publicId === childId) ?? nodes[childId];
             if (!child) continue;
-            const end0 = {x: child.rel_x, y: child.rel_y};
+            const end0 = {x: child.x, y: child.y};
             const end = rotTop(end0, am);
             out.push(
-                <Edge key={`edge-${n.id}-${childId}`} start={start} end={end}/>
+                <Edge key={`edge-${n.publicId}-${childId}`} start={start} end={end}/>
             );
         }
-
+        let color = "#FFF"
+        if (n.taskType === 0) {
+            color = app.services.categories.colorByPublicId(app.services.projects.getByPublicId(n.projectPublicId).categoryPublicId);
+        }
         out.push(
             <Node
-                key={`node-${n.id}`}
+                key={`node-${n.publicId}`}
                 start={start}
                 color={color}
-                title={n.title}
-                press={() => console.log(`Tapped node ${n.id}: ${n.title}`)}
+                title={n.name}
+                press={() => console.log(`Tapped node ${n.publicId}: ${n.name}`)}
+                type={n.taskType}
                 tapCoordinates={tapCoordinates}
                 tapHandledRef={tapHandledRef}
             />
@@ -249,7 +256,8 @@ const generate = (color, am, tapCoordinates, tapHandledRef) => {
     return out;
 };
 
-const projectImage = (a0, a1, i, color, title, icon) => {
+
+const projectImage = (a0, a1, i, color, project) => {
     const am = (a0 + a1) / 2;
     const L = 1000;
     const rC = CIRCLE_CENTER.R;
@@ -272,11 +280,11 @@ const projectImage = (a0, a1, i, color, title, icon) => {
                     textAnchor="middle"
                     alignmentBaseline="baseline"
                 >
-                    {title}
+                    {project.name}
                 </RNSVG.Text>
             </RNSVG.G>
             <SvgXml
-                xml={icon}
+                xml={project.svgIcon}
                 width={W}
                 height={W}
                 color={color}
@@ -286,44 +294,108 @@ const projectImage = (a0, a1, i, color, title, icon) => {
     );
 };
 
-function StrategyContent({ tapCoordinates, tapHandledRef }) {
+function darkenHexColor(hex, percent = 60) {
+    let cleanHex = hex.startsWith('#') ? hex.slice(1) : hex;
+
+    if (cleanHex.length === 3) {
+        cleanHex = cleanHex.split('').map(char => char + char).join('');
+    }
+
+    const hexValue = parseInt(cleanHex, 16) || 0;
+
+    const factor = Math.max(0, Math.min(1, (100 - percent) / 100));
+
+    const r = (hexValue >> 16) & 0xFF;
+    const g = (hexValue >> 8) & 0xFF;
+    const b = hexValue & 0xFF;
+
+    const rHex = Math.round(r * factor).toString(16).padStart(2, '0');
+    const gHex = Math.round(g * factor).toString(16).padStart(2, '0');
+    const bHex = Math.round(b * factor).toString(16).padStart(2, '0');
+
+    return `#${rHex}${gHex}${bHex}`;
+}
+
+function StrategyContent({app, tapCoordinates, tapHandledRef }) {
+    const {setProjectPositions, state } = useStrategy();
     const projectsCounter = 5;
     const start = Math.PI / 2 + Math.PI * 2 / projectsCounter * 3;
+    const projects = app.services.projects.get()["rawProjects"];
+
+    const calculatedPositions = useMemo(() => {
+        return Array.from({ length: projectsCounter }, (_, i) => {
+            const a0 = start + i * (2 * Math.PI / projectsCounter);
+            const a1 = a0 + (2 * Math.PI / projectsCounter);
+            const am = (a0 + a1) / 2;
+            const L = 1000;
+            const rC = CIRCLE_CENTER.R; // Make sure CIRCLE_CENTER is defined
+
+            const cx = (rC + L) * Math.cos(am);
+            const cy = (rC + L) * Math.sin(am);
+
+            console.log("calcu")
+            return {
+                id: projects[i].publicId,
+                name: projects[i].name,
+                x: cx,
+                y: cy,
+            };
+        });
+    }, [projects, projectsCounter, start]);
+
+    useEffect(() => {
+        setProjectPositions(calculatedPositions); // <-- 2. Here is the "save"
+
+    }, [calculatedPositions, setProjectPositions]);
+
     return (
         <RNSVG.G>
             {Array.from({length: projectsCounter}, (_, i) => {
                 const a0 = start + i * (2 * Math.PI / projectsCounter);
                 const a1 = a0 + (2 * Math.PI / projectsCounter);
-                return <RNSVG.Path key={`w-${i}`} d={wedgeD(R, a0, a1)} fill={COLS[i]}/>;
+                let color = app.services.categories.colorByPublicId(app.services.projects.getByPublicId(projects[i].publicId).categoryPublicId)
+
+                return <RNSVG.Path key={`w-${i}`} d={wedgeD(R, a0, a1)} fill={darkenHexColor(color, 98)}/>;
             })}
 
             {Array.from({length: projectsCounter}, (_, i) => {
                 const a = start + i * (2 * Math.PI / projectsCounter);
                 const prev = (i - 1 + projectsCounter) % projectsCounter;
-                return pair(a, COLS_LIGHT[prev], COLS_LIGHT[i], `b-${i}`);
+                let color_prev = app.services.categories.colorByPublicId(app.services.projects.getByPublicId(projects[prev].publicId).categoryPublicId)
+                let color = app.services.categories.colorByPublicId(app.services.projects.getByPublicId(projects[i].publicId).categoryPublicId)
+                return pair(a, color_prev, color, `b-${i}`);
+            })}
+
+            {calculatedPositions.map((pos, i) => {
+                const a0 = start + i * (2 * Math.PI / projectsCounter);
+                const a1 = a0 + (2 * Math.PI / projectsCounter);
+                let color = app.services.categories.colorByPublicId(app.services.projects.getByPublicId(projects[i].publicId).categoryPublicId)
+
+                return projectImage(
+                    a0, a1, `img-${i}`,
+                    darkenHexColor(color, 60),
+                    projects[i]
+                );
             })}
 
             {Array.from({length: projectsCounter}, (_, i) => {
                 const a0 = start + i * (2 * Math.PI / projectsCounter);
                 const a1 = a0 + (2 * Math.PI / projectsCounter);
-                return projectImage(a0, a1, `img-${i}`, PROJECT_COLORS[i], PROJECT_TITLES[i], ICONS2_CLEAN[i]);
+                let color = app.services.categories.colorByPublicId(app.services.projects.getByPublicId(projects[i].publicId).categoryPublicId)
+                return projectImage(a0, a1, `img-${i}`, darkenHexColor(color, 60), projects[i]);
             })}
 
             {Array.from({length: projectsCounter}, (_, i) => {
                 const a0 = start + i * (2 * Math.PI / projectsCounter);
                 const a1 = a0 + (2 * Math.PI / projectsCounter);
-                return midRadial(a0, a1, `mid-${i}`, COLS_LIGHT[i], tapCoordinates, tapHandledRef);
-            })}
 
-            <Node
-                key={`node-custom`}
-                start={{x:0, y:-700}}
-                color={"red"}
-                title={"new"}
-                press={() => console.log("xdd")}
-                tapCoordinates={tapCoordinates}
-                tapHandledRef={tapHandledRef}
-            />
+                const currentProjectId = projects[i].publicId;
+                const goalsForThisProject = state.goals.filter(
+                    goal => goal.projectPublicId === currentProjectId
+                );
+
+                return midRadial(app, a0, a1, `mid-${i}`, COLS_LIGHT[i], tapCoordinates, tapHandledRef, goalsForThisProject);
+            })}
 
             <RNSVG.Circle cx={0} cy={0} r={CIRCLE_CENTER.R} fill="#000" stroke="#FFF" strokeWidth={4}/>
             <RNSVG.Image

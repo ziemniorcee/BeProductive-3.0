@@ -25,7 +25,7 @@ const wasHit = (nodePosition, tapPosition, width) => {
     return {hit, dx, dy};
 };
 
-function Node({start, color, title, press, tapCoordinates, tapHandledRef}) {
+function Node({start, color, title, press, tapCoordinates, tapHandledRef, type}) {
 
     useEffect(() => {
         if (!tapCoordinates || !tapHandledRef.current || !press) {
@@ -62,14 +62,27 @@ function Node({start, color, title, press, tapCoordinates, tapHandledRef}) {
             {/*    fill="rgba(0, 255, 0, 0.3)"*/}
             {/*    pointerEvents="none"*/}
             {/*/>*/}
-            <RNSVG.Rect
-                x={start.x - rectWidth / 2}
-                y={start.y - rectWidth / 2}
-                width={rectWidth}
-                height={rectWidth}
-                fill={color}
-                vectorEffect="non-scaling-stroke"
-            />
+            {!type ? (
+                <RNSVG.Rect
+                    x={start.x - rectWidth / 2}
+                    y={start.y - rectWidth / 2}
+                    width={rectWidth}
+                    height={rectWidth}
+                    fill={color}
+                    vectorEffect="non-scaling-stroke"
+                />
+            ): (
+                <RNSVG.Circle
+                    cx={start.x}
+                    cy={start.y}
+                    r={rectWidth / 2}
+                    fill={color}
+                    vectorEffect="non-scaling-stroke"
+                />
+            )
+
+            }
+
             <RNSVG.Text
                 x={start.x}
                 y={start.y + rectWidth}

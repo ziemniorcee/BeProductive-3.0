@@ -8,7 +8,10 @@ export default class MyDayService {
     get = () => this.store.get();
     subscribe = (fn) => this.store.subscribe(fn);
 
-    load = (params) => this.store.load(params);
+    load = (params) => {
+
+        this.store.load(params)
+    };
 
     // optimistic step toggle with rollback
     async toggleStep(taskId, stepId, checked) {

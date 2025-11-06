@@ -8,7 +8,6 @@ import PointNameInput from "./PointNameInput";
 export default function AddNewPointWeb({app, draftPoint, onDraftChange, onSave, onCancel}) {
     const {state,  patchNewPoint} = useStrategy();
     const newPoint = state.addNewPoint;
-
     const handleNameChange = (name) => {
         onDraftChange(prev => ({ ...prev, name }));
     };
