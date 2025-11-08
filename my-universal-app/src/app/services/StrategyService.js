@@ -9,7 +9,6 @@ export class StrategyService {
     load = (params) => this.store.load(params);
 
     patchNewPoint(change) {
-        console.log("ch", change)
         this.store.patchNewPoint(change)
     }
 
@@ -17,9 +16,14 @@ export class StrategyService {
         this.store.openAddNewPoint();
     }
 
-    async closeAddNewPoint() {
-        console.log(this.store.state.addNewPoint)
-        await this.repo.closeNewPoint(this.store.state.addNewPoint);
-        this.store.closeAddNewPoint();
+    async saveNewPoint(pointToSave) {
+        pointToSave["publicId"] = crypto.randomUUID()
+        await this.repo.saveNewPoint(pointToSave);
+        this.store.saveNewPoint(pointToSave);
+    }
+
+    async changePointPosition(id, newPosition) {
+        await this.repo.changePointPosition(id, newPosition);
+        this.store.changePointPosition(id, newPosition);
     }
 }

@@ -7,7 +7,7 @@ export default function PointTypePicker({app, pointType}) {
     let currentType = pointTypeName(pointType ?? 0);
     let current = {name: currentType}
     let src = POINT_TYPES
-    let type ="pointType"
+    let type ="taskType"
     let label = "Point Type";
 
     return (

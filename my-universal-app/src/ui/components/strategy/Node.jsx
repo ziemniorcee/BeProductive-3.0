@@ -26,7 +26,6 @@ const wasHit = (nodePosition, tapPosition, width) => {
 };
 
 function Node({start, color, title, press, tapCoordinates, tapHandledRef, type}) {
-
     useEffect(() => {
         if (!tapCoordinates || !tapHandledRef.current || !press) {
             return;

@@ -5,7 +5,7 @@ import {useStrategy} from "../../../context/StrategyContext";
 import PointTypePicker from "../../todo/edit/pickers/pointType/PointTypePicker";
 import PointNameInput from "./PointNameInput";
 
-export default function AddNewPointWeb({app, draftPoint, onDraftChange, onSave, onCancel}) {
+export default function AddNewPointWeb({app, draftPoint, onDraftChange}) {
     const {state,  patchNewPoint} = useStrategy();
     const newPoint = state.addNewPoint;
     const handleNameChange = (name) => {
@@ -19,7 +19,7 @@ export default function AddNewPointWeb({app, draftPoint, onDraftChange, onSave, 
             </View>
             <View style={styles.body}>
                 <ProjectPicker app={app} id={newPoint.projectPublicId} />
-                <PointTypePicker app={app} pointType={newPoint.pointType}/>
+                <PointTypePicker app={app} pointType={newPoint.taskType}/>
                 <PointNameInput initialName={draftPoint.name} onNameChange={handleNameChange}/>
             </View>
         </View>

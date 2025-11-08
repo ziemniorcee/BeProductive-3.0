@@ -9,7 +9,6 @@ export default function PickerCore({app, src, type, onPick}){
     const currentScreen = app.view.current().screen
 
     let pickerChangeFunction = null
-    console.log(currentScreen, "currentScreen")
     if (currentScreen === "myday"){
         const {patchEdit} = useMyDay();
 
@@ -24,7 +23,6 @@ export default function PickerCore({app, src, type, onPick}){
 
     const select = React.useCallback((change) => {
         const id = change.publicId ?? change.id ?? change.level ?? change.type ?? null;
-        console.log(change)
         pickerChangeFunction({[type]: id});
         onPick?.(change);
     }, [pickerChangeFunction, type, onPick]);

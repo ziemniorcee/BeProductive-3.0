@@ -11,7 +11,7 @@ import * as RNSVG from "react-native-svg";
 import AppBar from "../common/appBar/AppBar";
 import GalaxyMenu from "./StrategyMenu";
 import AddNewPoint from "./newPoint/AddNewPoint.jsx";
-import {StrategyProvider} from "../../context/StrategyContext";
+import {StrategyProvider, useStrategy} from "../../context/StrategyContext";
 import {StrategyTopBanner} from "./StrategyTopBanner";
 
 const TILE = 1024;
@@ -21,7 +21,6 @@ const AnimatedG = Animated.createAnimatedComponent(RNSVG.G);
 const NODE_HIT_WIDTH = 80;
 const projectsCounter = 5;
 const startAngle = Math.PI / 2 + Math.PI * 2 / projectsCounter * 3;
-
 
 
 export function clampW(v, lo = 0.1, hi = 6) {
@@ -55,46 +54,39 @@ function rotTopW(p, am) {
     };
 }
 
-function getAbsoluteNodePositions(nodes, projectsCounter, startAngle) {
+function getAbsoluteNodePositions(nodes, projectsCounter, startAngle, projects) {
     'worklet';
     const positions = []; // An array of all node copies
 
     for (let i = 0; i < projectsCounter; i++) {
+        const currentProjectId = projects[i].publicId;
+        const goalsForThisProject = nodes.filter(
+            goal => goal.projectPublicId === currentProjectId
+        );
+
         const a0 = startAngle + i * (2 * Math.PI / projectsCounter);
         const a1 = a0 + (2 * Math.PI / projectsCounter);
         const am = (a0 + a1) / 2; // The angle of this group
 
-        for (const n of nodes) {
-            // We skip the custom node, it's not in the rotated groups
-            if (n.publicId === 99) continue;
-
+        for (const n of goalsForThisProject) {
             const start0 = {x: n.x, y: n.y};
             const absPos = rotTopW(start0, am);
 
             positions.push({
-                publicId: n.publicId,         // The node's base ID (e.g., 5)
+                publicId: n.publicId,
                 abs_x: absPos.x,
                 abs_y: absPos.y,
-                am: am,           // The rotation of this copy
+                am: am,
             });
         }
-    }
-
-    // Add the custom "new" node (which has no rotation)
-    const customNode = nodes.find(n => n.id === 99);
-    if (customNode) {
-        positions.push({
-            id: 99,
-            abs_x: customNode.rel_x, // 0
-            abs_y: customNode.rel_y, // -700
-            am: -Math.PI / 2, // The 'am' that results in a 0 rotation for rotTopW
-        });
     }
 
     return positions;
 }
 
-export default function StrategyCore({app, state, nodesShared, updateNodePosition,children}) {
+export default function StrategyCore({app, state, nodesShared, children}) {
+    const {updateNodePosition, changePointPosition} = useStrategy();
+
     const {width, height} = useWindowDimensions();
     const isWeb = Platform.OS === 'web';
     const scale = useSharedValue(1.4);
@@ -112,6 +104,8 @@ export default function StrategyCore({app, state, nodesShared, updateNodePositio
     const draggedNodeId = useSharedValue(null);
     const dragNodeStartX = useSharedValue(0); // Node's original rel_x
     const dragNodeStartY = useSharedValue(0); // Node's original rel_y
+    const dragNodeEndX = useSharedValue(0); // Node's original rel_x
+    const dragNodeEndY = useSharedValue(0);
     const dragOffsetX = useSharedValue(0);   // Offset from tap to node center
     const dragOffsetY = useSharedValue(0);
     const draggedNodeInfo = useSharedValue(null); // Stores { id, am }
@@ -150,7 +144,7 @@ export default function StrategyCore({app, state, nodesShared, updateNodePositio
         };
 
         // Set state to trigger re-render, passing coords to children
-        setTapCoordinates({ x: worldX, y: worldY });
+        setTapCoordinates({x: worldX, y: worldY});
     };
 
     const panStartX = useSharedValue(0);
@@ -199,14 +193,15 @@ export default function StrategyCore({app, state, nodesShared, updateNodePositio
             const worldY = (e.y / s) - ensureFiniteW(ty.value, 0);
 
             // 2. Get all absolute node positions
-            const nodePositions = getAbsoluteNodePositions(nodesShared.value, projectsCounter, startAngle);
+            const projects = app.services.projects.get()["rawProjects"];
 
+            const nodePositions = getAbsoluteNodePositions(nodesShared.value, projectsCounter, startAngle, projects);
             // 3. Check for a hit (loop backwards to hit top-most)
             let hitNode = null;
             for (let i = nodePositions.length - 1; i >= 0; i--) {
                 const nodeCopy = nodePositions[i];
-                const pos = { x: nodeCopy.abs_x, y: nodeCopy.abs_y };
-                if (wasHitW(pos, { x: worldX, y: worldY })) {
+                const pos = {x: nodeCopy.abs_x, y: nodeCopy.abs_y};
+                if (wasHitW(pos, {x: worldX, y: worldY})) {
                     hitNode = nodeCopy;
                     break;
                 }
@@ -227,12 +222,13 @@ export default function StrategyCore({app, state, nodesShared, updateNodePositio
                 }
 
                 // Store all drag info
-                draggedNodeInfo.value = { publicId: hitNode.publicId, am: hitNode.am };
+                draggedNodeInfo.value = {publicId: hitNode.publicId, am: hitNode.am};
                 dragNodeStartX.value = nodeData.x;
                 dragNodeStartY.value = nodeData.y;
 
                 // Stop the map from panning
                 panStartX.value = null;
+
 
             } else {
                 // --- WE ARE PANNING THE MAP ---
@@ -247,28 +243,21 @@ export default function StrategyCore({app, state, nodesShared, updateNodePositio
             const s = Math.max(scale.value, 0.1);
 
             if (draggedNodeInfo.value !== null) {
-                // --- DRAG NODE LOGIC ---
-                const { publicId, am } = draggedNodeInfo.value;
+                const {publicId, am} = draggedNodeInfo.value;
 
-                // 1. Get gesture translation in world space
                 const deltaX = e.translationX / s;
                 const deltaY = e.translationY / s;
 
-                // 2. Get inverse rotation angle
-                const t = am + Math.PI / 2; // Original rotation
-                const invT = -t;           // Inverse rotation
+                const t = am + Math.PI / 2;
+                const invT = -t;
 
-                // 3. Rotate the translation vector
                 const rotDeltaX = deltaX * Math.cos(invT) - deltaY * Math.sin(invT);
                 const rotDeltaY = deltaX * Math.sin(invT) + deltaY * Math.cos(invT);
 
-                // 4. Calculate new relative position
-                const newRelX = dragNodeStartX.value + rotDeltaX;
-                const newRelY = dragNodeStartY.value + rotDeltaY;
+                dragNodeEndX.value = dragNodeStartX.value + rotDeltaX;
+                dragNodeEndY.value = dragNodeStartY.value + rotDeltaY;
 
-                // 5. Update the state on the JS thread
-                runOnJS(updateNodePosition)(publicId, newRelX, newRelY);
-
+                runOnJS(updateNodePosition)(publicId, dragNodeEndX.value, dragNodeEndY.value);
             } else if (panStartX.value !== null) {
                 // --- PAN MAP LOGIC (your original logic) ---
                 tx.value = panStartX.value + e.translationX / s;
@@ -278,6 +267,11 @@ export default function StrategyCore({app, state, nodesShared, updateNodePositio
         .onEnd(() => {
             'worklet';
             // "Let go" of the node
+            if (draggedNodeInfo.value !== null) {
+                const publicId = draggedNodeInfo.value.publicId;
+                const position = {"x": dragNodeEndX.value, "y": dragNodeEndY.value}
+                changePointPosition(publicId, position);
+            }
             draggedNodeInfo.value = null;
         });
 
@@ -301,8 +295,6 @@ export default function StrategyCore({app, state, nodesShared, updateNodePositio
             setTimeout(() => {
                 const tapData = tapHandledRef.current;
                 if (tapData && tapData.closestNodeCallback) {
-                    console.log('Closest node won, firing callback.');
-                    // Fire the winner's callback
                     tapData.closestNodeCallback();
                 }
 
@@ -338,35 +330,31 @@ export default function StrategyCore({app, state, nodesShared, updateNodePositio
     }, [isWeb, onWheelCore]);
 
     return (
-        <StrategyProvider app={app}>
-            <GestureHandlerRootView style={styles.fill} collapsable={false}>
-                <GestureDetector gesture={Gesture.Simultaneous(pan, pinch, tap)}>
-                    <Animated.View
-                        ref={isWeb ? containerRef : null}
-                        style={[StyleSheet.absoluteFill, isWeb && {touchAction: 'none', userSelect: 'none'}]}
-                    >
-                        <RNSVG.Svg width={width} height={height} preserveAspectRatio="none" style={StyleSheet.absoluteFill} >
-                            <AnimatedG animatedProps={camProps}>
-                                {React.Children.map(children, child =>
-                                    React.cloneElement(child, {
-                                        tapCoordinates: tapCoordinates,
-                                        tapHandledRef: tapHandledRef,
-                                    })
-                                )}
-                            </AnimatedG>
-                        </RNSVG.Svg>
+        <GestureHandlerRootView style={styles.fill} collapsable={false}>
+            <GestureDetector gesture={Gesture.Simultaneous(pan, pinch, tap)}>
+                <Animated.View
+                    ref={isWeb ? containerRef : null}
+                    style={[StyleSheet.absoluteFill, isWeb && {touchAction: 'none', userSelect: 'none'}]}
+                >
+                    <RNSVG.Svg width={width} height={height} preserveAspectRatio="none" style={StyleSheet.absoluteFill}>
+                        <AnimatedG animatedProps={camProps}>
+                            {React.Children.map(children, child =>
+                                React.cloneElement(child, {
+                                    tapCoordinates: tapCoordinates,
+                                    tapHandledRef: tapHandledRef,
+                                })
+                            )}
+                        </AnimatedG>
+                    </RNSVG.Svg>
 
-                        <GalaxyMenu/>
-                        <AppBar app={app} horizontal={isWeb}/>
-                        {/*<StrategyTopBanner/>*/}
-                        {state.addNewPointOpen && (
-                            <AddNewPoint app={app} close={() => app.services.strategy.closeAddNewPoint()}/>
-                        )}
-
-                    </Animated.View>
-                </GestureDetector>
-            </GestureHandlerRootView>
-        </StrategyProvider>
+                    <GalaxyMenu/>
+                    <AppBar app={app} horizontal={isWeb}/>
+                    {state.addNewPointOpen && (
+                        <AddNewPoint app={app} onSave={(pointData) => app.services.strategy.saveNewPoint(pointData)}/>
+                    )}
+                </Animated.View>
+            </GestureDetector>
+        </GestureHandlerRootView>
     );
 }
 
@@ -375,7 +363,4 @@ const styles = StyleSheet.create({
     root: {flex: 1, backgroundColor: "#000"},
     layer: {position: "absolute", inset: 0, transformOrigin: "0 0", backfaceVisibility: "hidden"},
     block: {backgroundColor: "red", height: 50, width: 100},
-
-
-    menuListButtonName: {}
 });

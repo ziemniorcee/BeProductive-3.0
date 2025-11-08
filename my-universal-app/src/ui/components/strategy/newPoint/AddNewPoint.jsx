@@ -2,42 +2,37 @@ import {Platform} from "react-native";
 import Vignette from "../../common/Vignette";
 import AddNewPointWeb from "./AddNewPoint";
 import {useStrategy} from "../../../context/StrategyContext";
-import {useState} from "react";
+import {useEffect, useState} from "react";
 
-export default function AddNewPoint({app, close}) {
+export default function AddNewPoint({app, onSave}) {
     let isWeb = Platform.OS === "web";
     const { state, patchNewPoint, projectPositions } = useStrategy();
     const [draftPoint, setDraftPoint] = useState(state.addNewPoint);
-
 
     const handleSave = () => {
         const allKeys = new Set([
             ...Object.keys(state.addNewPoint),
             ...Object.keys(draftPoint)
         ]);
-
         const combinedPoint = Array.from(allKeys).reduce((acc, key) => {
-            acc[key] = draftPoint[key] ?? state.addNewPoint[key];
+            acc[key] = state.addNewPoint[key] ?? draftPoint[key];
             return acc;
         }, {});
 
         const projectId = combinedPoint.projectPublicId;
-        const matchingProject = projectPositions.find(project => project.id === projectId);
+        const matchingProject = projectPositions[projectPositions.length - 1]; // only god knows if it's correct
 
         if (matchingProject) {
             combinedPoint["x"] = matchingProject.x;
             combinedPoint["y"] = matchingProject.y;
         } else {
             console.warn(`Could not find project position for ID: ${projectId}`);
-            combinedPoint["x"] = 0; // Set a default
+            combinedPoint["x"] = 0;
             combinedPoint["y"] = 0;
         }
-        patchNewPoint(combinedPoint);
-        close(); // Call original close prop
-    };
 
-    const handleCancel = () => {
-        close();
+        if (combinedPoint.taskType === 0) combinedPoint.taskType = 0;
+        onSave(combinedPoint)
     };
 
     return isWeb ? (
@@ -47,7 +42,6 @@ export default function AddNewPoint({app, close}) {
                 draftPoint={draftPoint}
                 onDraftChange={setDraftPoint}
                 onSave={handleSave}
-                onCancel={handleCancel}
             />
         </Vignette>
     ) : null;

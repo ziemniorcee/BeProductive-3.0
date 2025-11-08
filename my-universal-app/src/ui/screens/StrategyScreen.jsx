@@ -5,10 +5,32 @@ import * as ScreenOrientation from 'expo-screen-orientation';
 import StrategyContent, {ICONS2_CLEAN, NODES_CONST} from "../components/strategy/StrategyContent";
 import {Platform} from "react-native";
 import {useSharedValue} from "react-native-reanimated";
+import {StrategyProvider, useStrategy} from "../context/StrategyContext";
+
+function StrategyViewWrapper({app}) {
+    // 1. Get state from the CONTEXT, not props or local state
+    const { state } = useStrategy();
+
+    // 2. Load the data (you can also move this into the provider)
+    React.useEffect(() => {
+        app.services.strategy.load();
+    }, [app]);
+
+    // 3. The shared value is now driven by the context state
+    const nodesShared = useSharedValue(state.goals);
+    useEffect(() => {
+        nodesShared.value = state.goals;
+    }, [state.goals]);
+
+    return (
+        <StrategyCore app={app} state={state} nodesShared={nodesShared}>
+            {/* 3. This component no longer needs the `state` prop */}
+            <StrategyContent app={app} icons={ICONS2_CLEAN} />
+        </StrategyCore>
+    );
+}
 
 export default function StrategyScreen({app}) {
-    const [state, setState] = React.useState(() => app.services.strategy.get());
-
     const isWeb = Platform.OS === "web";
 
     React.useEffect(() => {
@@ -18,36 +40,11 @@ export default function StrategyScreen({app}) {
             ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
     }, []);
 
-    React.useEffect(() => {
-        const unsub = app.services.strategy.subscribe(nextState => {
-            setState({...nextState});
-        });
-
-        app.services.strategy.load();
-        return () => unsub?.();
-    }, [app]);
-
-    const nodesShared = useSharedValue(state.goals);
-    useEffect(() => {
-        nodesShared.value = state.goals;
-    }, [state.goals]);
-
-    // 3. The state *update logic* lives here, in the same place as the state.
-    const updateNodePosition = (nodeId, newX, newY) => {
-        setState(currentState => ({
-            ...currentState,
-            goals: currentState.goals.map(goal =>
-                goal.publicId === nodeId
-                    ? { ...goal, x: newX, y: newY }
-                    : goal
-            )
-        }));
-    };
 
     return (
-        <StrategyCore app={app} state={state} nodesShared={nodesShared} updateNodePosition={updateNodePosition}>
-            <StrategyContent app={app} state={state} icons={ICONS2_CLEAN}/>
-        </StrategyCore>
+        <StrategyProvider app={app}>
+            <StrategyViewWrapper app={app} />
+        </StrategyProvider>
     );
 }
 

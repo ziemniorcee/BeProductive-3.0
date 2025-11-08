@@ -317,7 +317,7 @@ function darkenHexColor(hex, percent = 60) {
 }
 
 function StrategyContent({app, tapCoordinates, tapHandledRef }) {
-    const {setProjectPositions, state } = useStrategy();
+    const {state, setProjectPositions } = useStrategy();
     const projectsCounter = 5;
     const start = Math.PI / 2 + Math.PI * 2 / projectsCounter * 3;
     const projects = app.services.projects.get()["rawProjects"];
@@ -333,7 +333,6 @@ function StrategyContent({app, tapCoordinates, tapHandledRef }) {
             const cx = (rC + L) * Math.cos(am);
             const cy = (rC + L) * Math.sin(am);
 
-            console.log("calcu")
             return {
                 id: projects[i].publicId,
                 name: projects[i].name,
@@ -347,7 +346,6 @@ function StrategyContent({app, tapCoordinates, tapHandledRef }) {
         setProjectPositions(calculatedPositions); // <-- 2. Here is the "save"
 
     }, [calculatedPositions, setProjectPositions]);
-
     return (
         <RNSVG.G>
             {Array.from({length: projectsCounter}, (_, i) => {
@@ -378,12 +376,6 @@ function StrategyContent({app, tapCoordinates, tapHandledRef }) {
                 );
             })}
 
-            {Array.from({length: projectsCounter}, (_, i) => {
-                const a0 = start + i * (2 * Math.PI / projectsCounter);
-                const a1 = a0 + (2 * Math.PI / projectsCounter);
-                let color = app.services.categories.colorByPublicId(app.services.projects.getByPublicId(projects[i].publicId).categoryPublicId)
-                return projectImage(a0, a1, `img-${i}`, darkenHexColor(color, 60), projects[i]);
-            })}
 
             {Array.from({length: projectsCounter}, (_, i) => {
                 const a0 = start + i * (2 * Math.PI / projectsCounter);
@@ -393,7 +385,6 @@ function StrategyContent({app, tapCoordinates, tapHandledRef }) {
                 const goalsForThisProject = state.goals.filter(
                     goal => goal.projectPublicId === currentProjectId
                 );
-
                 return midRadial(app, a0, a1, `mid-${i}`, COLS_LIGHT[i], tapCoordinates, tapHandledRef, goalsForThisProject);
             })}
 
