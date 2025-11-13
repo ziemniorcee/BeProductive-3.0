@@ -29,7 +29,21 @@ export function makeStrategyRepo({http}) {
             const res = await http(`/api/change-point-position?${qs}`, { method: 'PATCH' });
             if (!res.ok) {
                 const errText = await res.text().catch(() => '');
-                throw new Error(`strategy.patch-new-point ${res.status} ${errText}`);
+                throw new Error(`strategy.patch-change-point-position ${res.status} ${errText}`);
+            }
+            return await res.json();
+        },
+
+        async createLink(startNodeId, endNodeId) {
+            const qs = new URLSearchParams({
+                startNodeId: startNodeId,
+                endNodeId: endNodeId
+            }).toString();
+
+            const res = await http(`/api/create-link?${qs}`, { method: 'POST' });
+            if (!res.ok) {
+                const errText = await res.text().catch(() => '');
+                throw new Error(`strategy.post-create-link ${res.status} ${errText}`);
             }
             return await res.json();
         }

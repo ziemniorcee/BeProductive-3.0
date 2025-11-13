@@ -109,4 +109,20 @@ export class StrategyStore {
         // 3. Set the new array to state
         this._set({ goals: newGoals });
     }
+
+    createLink = (startNodeId, endNodeId) => {
+        const currentGoals = this.state.goals ?? [];
+        const newGoals = currentGoals.map(goal => {
+
+            if (goal.publicId !== startNodeId) {
+                return goal;
+            }
+            return {
+                ...goal,
+                children: [...goal.children, endNodeId]
+            };
+        });
+
+        this._set({ goals: newGoals });
+    }
 }

@@ -26,4 +26,9 @@ export class StrategyService {
         await this.repo.changePointPosition(id, newPosition);
         this.store.changePointPosition(id, newPosition);
     }
+
+    async createLink(startNodeId, endNodeId) {
+        await this.repo.createLink(startNodeId, endNodeId);
+        this.store.createLink(startNodeId, endNodeId);
+    }
 }

@@ -12,7 +12,6 @@ import AppBar from "../common/appBar/AppBar";
 import GalaxyMenu from "./StrategyMenu";
 import AddNewPoint from "./newPoint/AddNewPoint.jsx";
 import {StrategyProvider, useStrategy} from "../../context/StrategyContext";
-import {StrategyTopBanner} from "./StrategyTopBanner";
 
 const TILE = 1024;
 const MAX_SCALE = 6;
@@ -84,8 +83,23 @@ function getAbsoluteNodePositions(nodes, projectsCounter, startAngle, projects) 
     return positions;
 }
 
+function findHitNode(worldX, worldY, nodes, projectsCounter, startAngle, projects) {
+    'worklet';
+    const nodePositions = getAbsoluteNodePositions(nodes, projectsCounter, startAngle, projects);
+    let hitNode = null;
+    for (let i = nodePositions.length - 1; i >= 0; i--) {
+        const nodeCopy = nodePositions[i];
+        const pos = {x: nodeCopy.abs_x, y: nodeCopy.abs_y};
+        if (wasHitW(pos, {x: worldX, y: worldY})) {
+            hitNode = nodeCopy;
+            break;
+        }
+    }
+    return hitNode;
+}
+
 export default function StrategyCore({app, state, nodesShared, children}) {
-    const {updateNodePosition, changePointPosition} = useStrategy();
+    const {updateNodePosition, changePointPosition, projectPositions} = useStrategy();
 
     const {width, height} = useWindowDimensions();
     const isWeb = Platform.OS === 'web';
@@ -110,10 +124,19 @@ export default function StrategyCore({app, state, nodesShared, children}) {
     const dragOffsetY = useSharedValue(0);
     const draggedNodeInfo = useSharedValue(null); // Stores { id, am }
 
+    const lineDrawingStartNode = useSharedValue(null); // { publicId, x, y }
+    const lineDrawingEndPosition = useSharedValue(null); // { x, y }
+    const lineDrawingEndNode = useSharedValue(null);
+
+    const projectsShared = useSharedValue(app.services.projects.get()["rawProjects"]);
+
+    useEffect(() => {
+        projectsShared.value = app.services.projects.get()["rawProjects"];
+    }, [app, projectsShared]);
 
     const camProps = useAnimatedProps(() => {
         'worklet';
-        const s = clampW(ensureFiniteW(scale.value, MIN_ZOOM));
+        const s = (ensureFiniteW(scale.value, MIN_ZOOM));
         const e = ensureFiniteW(tx.value, 0) * s;
         const f = ensureFiniteW(ty.value, 0) * s;
         if (isWeb) {
@@ -134,8 +157,6 @@ export default function StrategyCore({app, state, nodesShared, children}) {
     }, [width, height]);
 
     const handleTap_JS = (worldX, worldY) => {
-        // Reset the ref. A new tap is starting.
-        // All nodes will compete to fill `closestNodeCallback`.
         tapHandledRef.current = {
             x: worldX,
             y: worldY,
@@ -143,8 +164,15 @@ export default function StrategyCore({app, state, nodesShared, children}) {
             closestNodeCallback: null, // No winner yet
         };
 
-        // Set state to trigger re-render, passing coords to children
         setTapCoordinates({x: worldX, y: worldY});
+    };
+
+    const createConnection_JS = (startNodeId, endNodeId) => {
+        console.log(`Successfully created connection:`);
+        console.log(`FROM: ${startNodeId}`);
+        console.log(`TO:   ${endNodeId}`);
+        // TODO: Call your context or service method here, e.g.:
+        app.services.strategy.createLink(startNodeId, endNodeId);
     };
 
     const panStartX = useSharedValue(0);
@@ -181,57 +209,36 @@ export default function StrategyCore({app, state, nodesShared, children}) {
         });
 
     const pan = Gesture.Pan().minPointers(1).maxPointers(1)
-        .minDistance(4)
+        .minDistance(1)
         .simultaneousWithExternalGesture(pinch)
+        .mouseButton(1)
         .onBegin(e => {
             'worklet';
             if ((e.numberOfPointers ?? 0) !== 1) return;
 
-            // 1. Get tap in world coordinates
             const s = clampW(ensureFiniteW(scale.value, MIN_ZOOM));
             const worldX = (e.x / s) - ensureFiniteW(tx.value, 0);
             const worldY = (e.y / s) - ensureFiniteW(ty.value, 0);
 
-            // 2. Get all absolute node positions
-            const projects = app.services.projects.get()["rawProjects"];
-
-            const nodePositions = getAbsoluteNodePositions(nodesShared.value, projectsCounter, startAngle, projects);
-            // 3. Check for a hit (loop backwards to hit top-most)
-            let hitNode = null;
-            for (let i = nodePositions.length - 1; i >= 0; i--) {
-                const nodeCopy = nodePositions[i];
-                const pos = {x: nodeCopy.abs_x, y: nodeCopy.abs_y};
-                if (wasHitW(pos, {x: worldX, y: worldY})) {
-                    hitNode = nodeCopy;
-                    break;
-                }
-            }
+            const projects = projectsShared.value;
+            const hitNode = findHitNode(worldX, worldY, nodesShared.value, projectsCounter, startAngle, projects);
 
             if (hitNode !== null) {
-                // --- WE ARE DRAGGING A NODE ---
-
-                // Find the original node data (use == to compare string/number)
                 const nodeData = nodesShared.value.find(n => n.publicId == hitNode.publicId);
 
                 if (!nodeData) {
-                    // Failsafe: if node not found, just pan map
                     draggedNodeInfo.value = null;
                     panStartX.value = tx.value;
                     panStartY.value = ty.value;
                     return;
                 }
 
-                // Store all drag info
                 draggedNodeInfo.value = {publicId: hitNode.publicId, am: hitNode.am};
                 dragNodeStartX.value = nodeData.x;
                 dragNodeStartY.value = nodeData.y;
 
-                // Stop the map from panning
                 panStartX.value = null;
-
-
             } else {
-                // --- WE ARE PANNING THE MAP ---
                 draggedNodeInfo.value = null;
                 panStartX.value = tx.value;
                 panStartY.value = ty.value;
@@ -259,7 +266,6 @@ export default function StrategyCore({app, state, nodesShared, children}) {
 
                 runOnJS(updateNodePosition)(publicId, dragNodeEndX.value, dragNodeEndY.value);
             } else if (panStartX.value !== null) {
-                // --- PAN MAP LOGIC (your original logic) ---
                 tx.value = panStartX.value + e.translationX / s;
                 ty.value = panStartY.value + e.translationY / s;
             }
@@ -277,6 +283,7 @@ export default function StrategyCore({app, state, nodesShared, children}) {
 
     const tap = Gesture.Tap()
         .maxDuration(250)
+        .mouseButton(1)
         .onEnd((event, success) => {
             'worklet';
             if (success) {
@@ -288,6 +295,83 @@ export default function StrategyCore({app, state, nodesShared, children}) {
                 // Call your JS-thread function
                 runOnJS(handleTap_JS)(worldX, worldY);
             }
+        });
+
+    const rightClickHold = Gesture.Pan()
+        .mouseButton(2) // Listen for the right mouse button
+        .minDistance(1) // Start tracking after 1 pixel of movement
+        .onBegin((e) => {
+            'worklet';
+            const s = clampW(ensureFiniteW(scale.value, MIN_ZOOM));
+            const worldX = (e.x / s) - ensureFiniteW(tx.value, 0);
+            const worldY = (e.y / s) - ensureFiniteW(ty.value, 0);
+
+            const projects = projectsShared.value;
+            const hitNode = findHitNode(worldX, worldY, nodesShared.value, projectsCounter, startAngle, projects);
+
+            if (hitNode !== null) {
+                // Start drawing a line
+                lineDrawingStartNode.value = {
+                    publicId: hitNode.publicId,
+                    x: hitNode.abs_x,
+                    y: hitNode.abs_y,
+                };
+                // Set end position to start position initially
+                lineDrawingEndPosition.value = { x: hitNode.abs_x, y: hitNode.abs_y };
+                lineDrawingEndNode.value = null;
+            } else {
+                lineDrawingStartNode.value = null;
+                lineDrawingEndPosition.value = null;
+                lineDrawingEndNode.value = null;
+            }
+        })
+        .onUpdate((e) => {
+            'worklet';
+            // Only update if we successfully started on a node
+            if (lineDrawingStartNode.value === null) {
+                return;
+            }
+
+            const s = clampW(ensureFiniteW(scale.value, MIN_ZOOM));
+            const worldX = (e.x / s) - ensureFiniteW(tx.value, 0);
+            const worldY = (e.y / s) - ensureFiniteW(ty.value, 0);
+
+            // Update the line's end position to the cursor
+            lineDrawingEndPosition.value = { x: worldX, y: worldY };
+
+            // Check if we are hovering over another node
+            const projects = projectsShared.value;
+            const hitNode = findHitNode(worldX, worldY, nodesShared.value, projectsCounter, startAngle, projects);
+
+            if (hitNode !== null && hitNode.publicId !== lineDrawingStartNode.value.publicId) {
+                // Snap to this node
+                lineDrawingEndNode.value = {
+                    publicId: hitNode.publicId,
+                    x: hitNode.abs_x,
+                    y: hitNode.abs_y,
+                };
+            } else {
+                // Not hovering over a valid end node
+                lineDrawingEndNode.value = null;
+            }
+        })
+        .onEnd((e) => {
+            'worklet';
+            // Check if we ended on a valid node
+            if (lineDrawingStartNode.value !== null && lineDrawingEndNode.value !== null) {
+                // Success! Create the connection
+                runOnJS(createConnection_JS)(
+                    lineDrawingStartNode.value.publicId,
+                    lineDrawingEndNode.value.publicId
+                );
+            }
+
+            // Reset line drawing state regardless of success
+            setTimeout(() => {
+                lineDrawingStartNode.value = null;
+                lineDrawingEndPosition.value = null;
+                lineDrawingEndNode.value = null;
+            }, 100); // 100 milliseconds
         });
 
     useEffect(() => {
@@ -329,9 +413,23 @@ export default function StrategyCore({app, state, nodesShared, children}) {
         return () => el.removeEventListener('wheel', h);
     }, [isWeb, onWheelCore]);
 
+    const shiftCamera = () => {
+        'worklet';
+        let projectId = state.addNewPoint.projectPublicId;
+
+        const foundPosition = projectPositions.find(pos => pos.id === projectId);
+
+        tx.value = width / (2 * scale.value) - foundPosition.x;
+        ty.value = height / (2 * scale.value)-foundPosition.y;
+    }
+
+    const handlePointerDownCapture = (event) => {
+        event.stopPropagation();
+    }
+
     return (
-        <GestureHandlerRootView style={styles.fill} collapsable={false}>
-            <GestureDetector gesture={Gesture.Simultaneous(pan, pinch, tap)}>
+        <GestureHandlerRootView style={styles.fill} collapsable={false} onPointerDownCapture={handlePointerDownCapture}>
+            <GestureDetector gesture={Gesture.Simultaneous(pan, pinch, tap, rightClickHold)}>
                 <Animated.View
                     ref={isWeb ? containerRef : null}
                     style={[StyleSheet.absoluteFill, isWeb && {touchAction: 'none', userSelect: 'none'}]}
@@ -342,6 +440,10 @@ export default function StrategyCore({app, state, nodesShared, children}) {
                                 React.cloneElement(child, {
                                     tapCoordinates: tapCoordinates,
                                     tapHandledRef: tapHandledRef,
+                                    lineDrawingStartNode: lineDrawingStartNode,
+                                    lineDrawingEndPosition: lineDrawingEndPosition,
+                                    lineDrawingEndNode: lineDrawingEndNode,
+                                    scale: scale,
                                 })
                             )}
                         </AnimatedG>
@@ -350,7 +452,10 @@ export default function StrategyCore({app, state, nodesShared, children}) {
                     <GalaxyMenu/>
                     <AppBar app={app} horizontal={isWeb}/>
                     {state.addNewPointOpen && (
-                        <AddNewPoint app={app} onSave={(pointData) => app.services.strategy.saveNewPoint(pointData)}/>
+                        <AddNewPoint app={app} onSave={(pointData) => {
+                            shiftCamera()
+                            app.services.strategy.saveNewPoint(pointData)
+                        }}/>
                     )}
                 </Animated.View>
             </GestureDetector>

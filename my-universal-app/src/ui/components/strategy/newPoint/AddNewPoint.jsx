@@ -14,10 +14,7 @@ export default function AddNewPoint({app, onSave}) {
             ...Object.keys(state.addNewPoint),
             ...Object.keys(draftPoint)
         ]);
-        const combinedPoint = Array.from(allKeys).reduce((acc, key) => {
-            acc[key] = state.addNewPoint[key] ?? draftPoint[key];
-            return acc;
-        }, {});
+        const combinedPoint = { ...draftPoint, ...state.addNewPoint };
 
         const projectId = combinedPoint.projectPublicId;
         const matchingProject = projectPositions[projectPositions.length - 1]; // only god knows if it's correct
@@ -31,7 +28,7 @@ export default function AddNewPoint({app, onSave}) {
             combinedPoint["y"] = 0;
         }
 
-        if (combinedPoint.taskType === 0) combinedPoint.taskType = 0;
+        if (combinedPoint.taskType === null) combinedPoint.taskType = 0;
         onSave(combinedPoint)
     };
 

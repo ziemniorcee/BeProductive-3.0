@@ -3,7 +3,6 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import {createApp} from "../../src/app/container";
 import {ScreenRouter} from "../../src/ui/ScreenRouter";
 import {GestureHandlerRootView} from "react-native-gesture-handler";
-import {StatusBar} from "react-native";
 
 const app = createApp();
 
