@@ -11,10 +11,6 @@ import Animated, {useAnimatedProps} from "react-native-reanimated";
 const sep = 15;
 const CIRCLE_CENTER = {R: 140, D: 200};
 const CIRCLE_OUTER = {R: 4000,};
-const COLS = ['#050500', '#070004', '#02050B', '#010700', '#050500', '#050500'];
-const COLS_LIGHT = ['#FFEE00', '#AD085F', '#2979FF', '#42FF29', '#FFEE00', '#FFEE00'];
-const PROJECT_COLORS = ["#2C2900", "#3B0221", "#0D2854", "#10380B", "#2C2900", "#2C2900"]
-const PROJECT_TITLES = ["Productivity", "BeProductive", "University", "Government", "Japanese", "Japanese"]
 const AnimatedLine = Animated.createAnimatedComponent(RNSVG.Line);
 
 const lineWidth = 2;
@@ -52,12 +48,11 @@ const pair = (a, colPrev, colCurr, keyBase) => {
     );
 };
 
-
-const midRadial = (app, a0, a1, i, color, tapCoordinates, tapHandledRef, nodes) => {
+const midRadial = (app, a0, a1, i, nodes) => {
     const am = (a0 + a1) / 2;
     return (
         <RNSVG.G key={`midRadial-${i}`}>
-            {generate(app, color, am, tapCoordinates, tapHandledRef, nodes)}
+            {generate(app, am, nodes)}
         </RNSVG.G>
     );
 };
@@ -69,7 +64,7 @@ const rot = ({x, y}, t) => ({
 
 const rotTop = (p, am) => rot(p, am + Math.PI / 2);
 
-const generate = (app, color, am, tapCoordinates, tapHandledRef, nodes) => {
+const generate = (app, am, nodes) => {
     const edges = [];
     const nodesOut = [];
 
@@ -105,10 +100,7 @@ const generate = (app, color, am, tapCoordinates, tapHandledRef, nodes) => {
                 start={start}
                 color={nodeColor}
                 title={n.name}
-                press={() => console.log(`Tapped node ${n.publicId}: ${n.name}`)}
                 type={n.taskType}
-                tapCoordinates={tapCoordinates}
-                tapHandledRef={tapHandledRef}
             />
         );
     }
@@ -179,8 +171,6 @@ function darkenHexColor(hex, percent = 60) {
 
 function StrategyContent({
                              app,
-                             tapCoordinates,
-                             tapHandledRef,
                              lineDrawingStartNode,
                              lineDrawingEndPosition,
                              lineDrawingEndNode,
@@ -199,7 +189,7 @@ function StrategyContent({
 
             return {
                 x1: 0, y1: 0, x2: 0, y2: 0,
-                strokeWidth: 2/scale.value,
+                strokeWidth: 2 / scale.value,
                 stroke: '#717171',
             };
         }
@@ -224,7 +214,6 @@ function StrategyContent({
             y2: endY,
         };
     });
-
 
 
     const calculatedPositions = useMemo(() => {
@@ -281,7 +270,7 @@ function StrategyContent({
                     projects[i]
                 );
             })}
-            <AnimatedLine animatedProps={animatedLineProps} />
+            <AnimatedLine animatedProps={animatedLineProps}/>
 
 
             {Array.from({length: projectsCounter}, (_, i) => {
@@ -292,7 +281,7 @@ function StrategyContent({
                 const goalsForThisProject = state.goals.filter(
                     goal => goal.projectPublicId === currentProjectId
                 );
-                return midRadial(app, a0, a1, `mid-${i}`, COLS_LIGHT[i], tapCoordinates, tapHandledRef, goalsForThisProject);
+                return midRadial(app, a0, a1, `mid-${i}`, goalsForThisProject);
             })}
 
             <RNSVG.Circle cx={0} cy={0} r={CIRCLE_CENTER.R} fill="#000" stroke="#FFF" strokeWidth={4}/>

@@ -3,10 +3,10 @@ import {Image} from "expo-image";
 import React from "react";
 import AppBarCore from "./AppBarCore";
 
-export default function AppBar({app, horizontal=true}) {
+export default function AppBar({app}) {
     const isWeb = Platform.OS === 'web';
 
-    if (isWeb || horizontal) {
+    if (isWeb) {
         return (<AppBarCore app={app} horizontal/>);
     }
     else {

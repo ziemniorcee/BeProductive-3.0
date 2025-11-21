@@ -25,32 +25,7 @@ const wasHit = (nodePosition, tapPosition, width) => {
     return {hit, dx, dy};
 };
 
-function Node({start, color, title, press, tapCoordinates, tapHandledRef, type}) {
-    useEffect(() => {
-        if (!tapCoordinates || !tapHandledRef.current || !press) {
-            return;
-        }
-
-        if (
-            tapCoordinates.x !== tapHandledRef.current.x ||
-            tapCoordinates.y !== tapHandledRef.current.y
-        ) {
-            return;
-        }
-
-        const {hit, dx, dy} = wasHit(start, tapCoordinates, touchableWidth);
-
-        if (hit) {
-            const distSq = dx * dx + dy * dy;
-
-            if (distSq < tapHandledRef.current.closestDist) {
-                tapHandledRef.current.closestDist = distSq;
-                tapHandledRef.current.closestNodeCallback = press;
-            }
-        }
-    }, [tapCoordinates, press, start, tapHandledRef]);
-
-
+function Node({start, color, title, type}) {
     return (
         <RNSVG.G>
             {/*<RNSVG.Rect*/}
@@ -70,7 +45,7 @@ function Node({start, color, title, press, tapCoordinates, tapHandledRef, type})
                     fill={color}
                     vectorEffect="non-scaling-stroke"
                 />
-            ): (
+            ) : (
                 <RNSVG.Circle
                     cx={start.x}
                     cy={start.y}

@@ -125,4 +125,25 @@ export class StrategyStore {
 
         this._set({ goals: newGoals });
     }
+
+    removeNode = (nodeId) => {
+        const currentGoals = this.state.goals ?? [];
+        const newGoals = currentGoals.filter(goal => goal.publicId !== nodeId);
+        this._set({ goals: newGoals });
+    }
+
+    removeEdge = (startNodeId, endNodeId) => {
+        console.log(startNodeId, endNodeId, "removeEdge")
+        const currentGoals = this.state.goals ?? [];
+        const newGoals = currentGoals.map(goal => {
+            if (goal.publicId !== startNodeId) {
+                return goal;
+            }
+            return {
+                ...goal,
+                children: goal.children.filter(child => child !== endNodeId)
+            };
+        })
+        this._set({ goals: newGoals });
+    }
 }

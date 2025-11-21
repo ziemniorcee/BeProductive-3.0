@@ -31,4 +31,15 @@ export class StrategyService {
         await this.repo.createLink(startNodeId, endNodeId);
         this.store.createLink(startNodeId, endNodeId);
     }
+
+    async removeNode(nodeId) {
+        await this.repo.removeNode(nodeId);
+        this.store.removeNode(nodeId);
+    }
+
+    async removeEdge(parentPublicId, childPublicId) {
+        await this.repo.removeEdge(parentPublicId, childPublicId);
+        this.store.removeEdge(parentPublicId, childPublicId);
+    }
+
 }
