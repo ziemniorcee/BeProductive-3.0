@@ -1,23 +1,34 @@
 import {Gesture, GestureDetector, GestureHandlerRootView} from "react-native-gesture-handler";
-import Animated, { useSharedValue, runOnJS } from "react-native-reanimated";
+import Animated, {useSharedValue, runOnJS} from "react-native-reanimated";
 import {clampW, ensureFiniteW, findHitEdge, findHitNode} from './StrategyUtils';
-import { MIN_ZOOM, projectsCounter, startAngle } from './StrategyConstants';
+import {MIN_ZOOM, projectsCounter, startAngle} from './StrategyConstants';
 
 export function useStrategyGestures({
-                                      app,
-                                      scale,
-                                      tx,
-                                      ty,
-                                      width,
-                                      height,
-                                      isWeb,
-                                      nodesShared,
-                                      projectsShared,
-                                      updateNodePosition,
-                                      changePointPosition,
-                                      handleTap_JS,
-                                  }) {
-    // All gesture-related shared values move here
+                                        app,
+                                        scale,
+                                        tx,
+                                        ty,
+                                        width,
+                                        height,
+                                        isWeb,
+                                        nodesShared,
+                                        projectsShared,
+                                        updateNodePosition,
+                                        changePointPosition,
+                                        handleTap_JS,
+                                    }) {
+    const createLink = (startNodeId, endNodeId) => {
+        app.services.strategy.createLink(startNodeId, endNodeId);
+    };
+
+    // Helper function to reset drawing values after a delay
+    const resetDrawingValues = (startNode, endPosition, endNode) => {
+        setTimeout(() => {
+            startNode.value = null;
+            endPosition.value = null;
+            endNode.value = null;
+        }, 100);
+    };
     const pinchInited = useSharedValue(0);
     const s0 = useSharedValue(1);
     const tx0 = useSharedValue(0);
@@ -36,7 +47,6 @@ export function useStrategyGestures({
     const panStartX = useSharedValue(0);
     const panStartY = useSharedValue(0);
 
-    // All gesture definitions move here
     const pinch = Gesture.Pinch()
         .onBegin(() => {
             'worklet';
@@ -68,29 +78,36 @@ export function useStrategyGestures({
             pinchInited.value = 0;
         });
 
-    const pan = Gesture.Pan().minPointers(1).maxPointers(1)
-        .minDistance(1)
-        .simultaneousWithExternalGesture(pinch)
-        .mouseButton(1)
-        .onBegin(e => {
-            'worklet';
-            runOnJS(handleTap_JS)(null, null,  null,  null , null)
+    const onPanBeginHandler = (e) => {
+        'worklet';
+        try {
+            if (!e) {
+                return;
+            }
+
             if ((e.numberOfPointers ?? 0) !== 1) return;
 
             const s = clampW(ensureFiniteW(scale.value, MIN_ZOOM));
-            const worldX = (e.x / s) - ensureFiniteW(tx.value, 0);
-            const worldY = (e.y / s) - ensureFiniteW(ty.value, 0);
+            const eventX = e.x ?? 0;
+            const eventY = e.y ?? 0;
+            const txValue = ensureFiniteW(tx.value, 0);
+            const tyValue = ensureFiniteW(ty.value, 0);
 
-            const projects = projectsShared.value;
-            const hitNode = findHitNode(worldX, worldY, nodesShared.value, projectsCounter, startAngle, projects);
+            const worldX = (eventX / s) - txValue;
+            const worldY = (eventY / s) - tyValue;
+
+            const projects = projectsShared?.value ?? [];
+            const nodes = nodesShared?.value ?? [];
+
+            const hitNode = findHitNode(worldX, worldY, nodes, projectsCounter, startAngle, projects);
 
             if (hitNode !== null) {
-                const nodeData = nodesShared.value.find(n => n.publicId == hitNode.publicId);
+                const nodeData = nodes.find(n => n.publicId == hitNode.publicId);
 
                 if (!nodeData) {
                     draggedNodeInfo.value = null;
-                    panStartX.value = tx.value;
-                    panStartY.value = ty.value;
+                    panStartX.value = txValue;
+                    panStartY.value = tyValue;
                     return;
                 }
 
@@ -101,154 +118,306 @@ export function useStrategyGestures({
                 panStartX.value = null;
             } else {
                 draggedNodeInfo.value = null;
-                panStartX.value = tx.value;
-                panStartY.value = ty.value;
+                panStartX.value = txValue;
+                panStartY.value = tyValue;
+
+
             }
-        })
-        .onUpdate(e => {
-            'worklet';
-            if ((e.numberOfPointers ?? 0) !== 1 || pinchInited.value) return;
-            const s = Math.max(scale.value, 0.1);
-
-            if (draggedNodeInfo.value !== null) {
-                const {publicId, am} = draggedNodeInfo.value;
-
-                const deltaX = e.translationX / s;
-                const deltaY = e.translationY / s;
-
-                const t = am + Math.PI / 2;
-                const invT = -t;
-
-                const rotDeltaX = deltaX * Math.cos(invT) - deltaY * Math.sin(invT);
-                const rotDeltaY = deltaX * Math.sin(invT) + deltaY * Math.cos(invT);
-
-                dragNodeEndX.value = dragNodeStartX.value + rotDeltaX;
-                dragNodeEndY.value = dragNodeStartY.value + rotDeltaY;
-
-                runOnJS(updateNodePosition)(publicId, dragNodeEndX.value, dragNodeEndY.value);
-            } else if (panStartX.value !== null) {
-                tx.value = panStartX.value + e.translationX / s;
-                ty.value = panStartY.value + e.translationY / s;
-            }
-        })
-        .onEnd(() => {
-            'worklet';
-            // "Let go" of the node
-            if (draggedNodeInfo.value !== null) {
-                const publicId = draggedNodeInfo.value.publicId;
-                const position = {"x": dragNodeEndX.value, "y": dragNodeEndY.value}
-
-                changePointPosition(publicId, position);
-            }
+        } catch (error) {
             draggedNodeInfo.value = null;
-        });
+            panStartX.value = ensureFiniteW(tx.value, 0);
+            panStartY.value = ensureFiniteW(ty.value, 0);
+        }
+    };
 
-    const tap = Gesture.Tap()
-        .maxDuration(250)
-        .mouseButton(1)
-        .onEnd((event, success) => {
-            'worklet';
-            if (success) {
-                // Convert screen coordinates to world (SVG) coordinates
-                const s = clampW(ensureFiniteW(scale.value, MIN_ZOOM));
-                const worldX = (event.x / s) - ensureFiniteW(tx.value, 0);
-                const worldY = (event.y / s) - ensureFiniteW(ty.value, 0);
-                const projects = projectsShared.value;
-                const hitNode = findHitNode(worldX, worldY, nodesShared.value, projectsCounter, startAngle, projects);
+    const onPanUpdateHandler = (e) => {
+        'worklet';
+        if (!e) {
+            return;
+        }
 
-                if (hitNode) {
-                    const type = "node"
+        if ((e.numberOfPointers ?? 0) !== 1 || pinchInited.value) return;
 
-                    runOnJS(handleTap_JS)(event.x, event.y, hitNode?.publicId ?? null, null, type);
-                    return
-                }
+        const s = Math.max(ensureFiniteW(scale.value, MIN_ZOOM), 0.1);
 
-                const hitEdge = findHitEdge(worldX, worldY, nodesShared.value, projectsCounter, startAngle, projects);
+        const translationX = e.translationX ?? 0;
+        const translationY = e.translationY ?? 0;
 
-                if (hitEdge) {
-                    const type = "edge"
-                    runOnJS(handleTap_JS)(event.x, event.y, hitEdge.parentPublicId ?? null, hitEdge.childPublicId  ?? null , type)
-                    return
-                }
+        if (draggedNodeInfo.value !== null) {
+            const publicId = draggedNodeInfo.value?.publicId;
+            const am = draggedNodeInfo.value?.am ?? 0;
 
-                runOnJS(handleTap_JS)(event.x, event.y,  null,  null , null)
-                // Call your JS-thread function
+            if (!publicId) {
+                return;
             }
-        });
 
-    const rightClickHold = Gesture.Pan()
-        .mouseButton(2) // Listen for the right mouse button
-        .minDistance(1) // Start tracking after 1 pixel of movement
-        .onBegin((e) => {
-            'worklet';
+            const deltaX = translationX / s;
+            const deltaY = translationY / s;
+
+            const t = am + Math.PI / 2;
+            const invT = -t;
+
+            const rotDeltaX = deltaX * Math.cos(invT) - deltaY * Math.sin(invT);
+            const rotDeltaY = deltaX * Math.sin(invT) + deltaY * Math.cos(invT);
+
+            const startX = ensureFiniteW(dragNodeStartX.value, 0);
+            const startY = ensureFiniteW(dragNodeStartY.value, 0);
+
+            dragNodeEndX.value = startX + rotDeltaX;
+            dragNodeEndY.value = startY + rotDeltaY;
+
+            const endX = ensureFiniteW(dragNodeEndX.value, startX);
+            const endY = ensureFiniteW(dragNodeEndY.value, startY);
+
+            runOnJS(updateNodePosition)(publicId, endX, endY);
+        } else if (panStartX.value !== null) {
+            const startX = ensureFiniteW(panStartX.value, 0);
+            const startY = ensureFiniteW(panStartY.value, 0);
+
+            tx.value = startX + translationX / s;
+            ty.value = startY + translationY / s;
+        }
+    };
+
+    const onPanEndHandler = (e) => {
+        'worklet';
+        if (draggedNodeInfo.value !== null) {
+            const publicId = draggedNodeInfo.value?.publicId;
+
+            if (!publicId) {
+                draggedNodeInfo.value = null;
+                return;
+            }
+
+            const endX = ensureFiniteW(dragNodeEndX.value, 0);
+            const endY = ensureFiniteW(dragNodeEndY.value, 0);
+
+            const position = {"x": endX, "y": endY};
+
+            runOnJS(changePointPosition)(publicId, position);
+        }
+
+        draggedNodeInfo.value = null;
+    };
+
+    let pan;
+    if (isWeb) {
+        pan = Gesture.Pan()
+            .minPointers(1)
+            .maxPointers(1)
+            .minDistance(1)
+            .simultaneousWithExternalGesture(pinch)
+            .mouseButton(1) // Only for web
+            .onBegin(onPanBeginHandler)
+            .onUpdate(onPanUpdateHandler)
+            .onEnd(onPanEndHandler);
+    } else {
+        pan = Gesture.Pan()
+            .minPointers(1)
+            .maxPointers(1)
+            .minDistance(5)
+            .simultaneousWithExternalGesture(pinch)
+            .onBegin(onPanBeginHandler)
+            .onUpdate(onPanUpdateHandler)
+            .onEnd(onPanEndHandler);
+    }
+
+    const handleTapEvent = (event) => {
+        'worklet';
+        const eventX = event.x ?? 0;
+        const eventY = event.y ?? 0;
+
+        const s = clampW(ensureFiniteW(scale.value, MIN_ZOOM));
+        const worldX = (eventX / s) - ensureFiniteW(tx.value, 0);
+        const worldY = (eventY / s) - ensureFiniteW(ty.value, 0);
+
+        const projects = projectsShared?.value ?? [];
+        const nodes = nodesShared?.value ?? [];
+
+        const hitNode = findHitNode(worldX, worldY, nodes, projectsCounter, startAngle, projects);
+
+        if (hitNode) {
+            const type = "node";
+            runOnJS(handleTap_JS)(eventX, eventY, hitNode?.publicId ?? null, null, type);
+            return;
+        }
+
+        const hitEdge = findHitEdge(worldX, worldY, nodes, projectsCounter, startAngle, projects);
+
+        if (hitEdge) {
+            const type = "edge";
+            runOnJS(handleTap_JS)(eventX, eventY, hitEdge?.parentPublicId ?? null, hitEdge?.childPublicId ?? null, type);
+            return;
+        }
+
+        runOnJS(handleTap_JS)(eventX, eventY, null, null, null);
+    };
+
+    let tap;
+    if (isWeb) {
+        tap = Gesture.Tap()
+            .maxDuration(250)
+            .maxDistance(10) // Allow small movement during tap on web
+            .mouseButton(1) // Only for web
+            .onBegin(() => {
+                'worklet';
+                draggedNodeInfo.value = null;
+            })
+            .onEnd((event, success) => {
+                'worklet';
+                if (success) {
+                    handleTapEvent(event);
+                }
+            });
+    } else {
+        tap = Gesture.Tap()
+            .maxDuration(500) // Longer duration for mobile
+            .maxDistance(20) // Allow more movement during tap on mobile
+            .numberOfTaps(1) // Explicitly set to single tap
+            .onBegin(() => {
+                'worklet';
+                draggedNodeInfo.value = null;
+            })
+            .onEnd((event, success) => {
+                'worklet';
+                if (success) {
+                    handleTapEvent(event);
+                }
+            });
+    }
+
+    const onBeginHandler = (e) => {
+        'worklet';
+        try {
+            const eventX = e.x ?? 0;
+            const eventY = e.y ?? 0;
+
             const s = clampW(ensureFiniteW(scale.value, MIN_ZOOM));
-            const worldX = (e.x / s) - ensureFiniteW(tx.value, 0);
-            const worldY = (e.y / s) - ensureFiniteW(ty.value, 0);
+            const worldX = (eventX / s) - ensureFiniteW(tx.value, 0);
+            const worldY = (eventY / s) - ensureFiniteW(ty.value, 0);
 
-            const projects = projectsShared.value;
-            const hitNode = findHitNode(worldX, worldY, nodesShared.value, projectsCounter, startAngle, projects);
+            const projects = projectsShared?.value ?? [];
+            const nodes = nodesShared?.value ?? [];
+
+            const hitNode = findHitNode(worldX, worldY, nodes, projectsCounter, startAngle, projects);
 
             if (hitNode !== null) {
-                // Start drawing a line
                 lineDrawingStartNode.value = {
                     publicId: hitNode.publicId,
                     x: hitNode.abs_x,
                     y: hitNode.abs_y,
                 };
-                // Set end position to start position initially
-                lineDrawingEndPosition.value = { x: hitNode.abs_x, y: hitNode.abs_y };
+                lineDrawingEndPosition.value = {x: hitNode.abs_x, y: hitNode.abs_y};
                 lineDrawingEndNode.value = null;
             } else {
                 lineDrawingStartNode.value = null;
                 lineDrawingEndPosition.value = null;
                 lineDrawingEndNode.value = null;
             }
-        })
-        .onUpdate((e) => {
-            'worklet';
-            if (lineDrawingStartNode.value === null) {
-                return;
-            }
+        } catch (error) {
+            lineDrawingStartNode.value = null;
+            lineDrawingEndPosition.value = null;
+            lineDrawingEndNode.value = null;
+        }
+    };
 
-            const s = clampW(ensureFiniteW(scale.value, MIN_ZOOM));
-            const worldX = (e.x / s) - ensureFiniteW(tx.value, 0);
-            const worldY = (e.y / s) - ensureFiniteW(ty.value, 0);
+    const onUpdateHandler = (e) => {
+        'worklet';
+        if (lineDrawingStartNode.value === null) {
+            return;
+        }
 
-            lineDrawingEndPosition.value = { x: worldX, y: worldY };
+        const eventX = e.x ?? 0;
+        const eventY = e.y ?? 0;
 
-            const projects = projectsShared.value;
-            const hitNode = findHitNode(worldX, worldY, nodesShared.value, projectsCounter, startAngle, projects);
+        const s = clampW(ensureFiniteW(scale.value, MIN_ZOOM));
+        const worldX = (eventX / s) - ensureFiniteW(tx.value, 0);
+        const worldY = (eventY / s) - ensureFiniteW(ty.value, 0);
 
-            if (hitNode !== null && hitNode.publicId !== lineDrawingStartNode.value.publicId) {
-                lineDrawingEndNode.value = {
-                    publicId: hitNode.publicId,
-                    x: hitNode.abs_x,
-                    y: hitNode.abs_y,
-                };
-            } else {
-                lineDrawingEndNode.value = null;
-            }
-        })
-        .onEnd((e) => {
-            'worklet';
-            // Check if we ended on a valid node
+        lineDrawingEndPosition.value = {x: worldX, y: worldY};
+
+        const projects = projectsShared?.value ?? [];
+        const nodes = nodesShared?.value ?? [];
+
+        const hitNode = findHitNode(worldX, worldY, nodes, projectsCounter, startAngle, projects);
+
+        if (hitNode !== null && hitNode.publicId !== lineDrawingStartNode.value.publicId) {
+            lineDrawingEndNode.value = {
+                publicId: hitNode.publicId,
+                x: hitNode.abs_x,
+                y: hitNode.abs_y,
+            };
+        } else {
+            lineDrawingEndNode.value = null;
+        }
+    };
+
+    const onEndHandler = (e) => {
+        'worklet';
+        try {
             if (lineDrawingStartNode.value !== null && lineDrawingEndNode.value !== null) {
                 const startNodeId = lineDrawingStartNode.value.publicId
                 const endNodeId = lineDrawingEndNode.value.publicId;
-                app.services.strategy.createLink(startNodeId, endNodeId);
-
+                runOnJS(createLink)(startNodeId, endNodeId);
             }
 
-            setTimeout(() => {
-                lineDrawingStartNode.value = null;
-                lineDrawingEndPosition.value = null;
-                lineDrawingEndNode.value = null;
-            }, 100);
-        });
+            runOnJS(resetDrawingValues)(lineDrawingStartNode, lineDrawingEndPosition, lineDrawingEndNode);
+        } catch (error) {
+            runOnJS(resetDrawingValues)(lineDrawingStartNode, lineDrawingEndPosition, lineDrawingEndNode);
+        }
+    };
 
-    // Return the combined gesture and the values needed for rendering
+    let rightClickHold;
+    if (isWeb) {
+        rightClickHold = Gesture.Pan()
+            .mouseButton(2) // Listen for the right mouse button on web
+            .minDistance(1) // Start tracking after 1 pixel of movement
+            .onBegin(onBeginHandler)
+            .onUpdate(onUpdateHandler)
+            .onEnd(onEndHandler);
+    } else {
+        rightClickHold = Gesture.LongPress()
+            .minDuration(500) // 500ms long press for mobile
+            .onBegin((e) => {
+                'worklet';
+                onBeginHandler(e);
+
+                lineDrawingEndPosition.value = {
+                    x: lineDrawingStartNode.value?.x || 0,
+                    y: lineDrawingStartNode.value?.y || 0
+                };
+            })
+            .onEnd((e) => {
+                'worklet';
+                try {
+                    onEndHandler(e);
+                } catch (error) {
+                    runOnJS(resetDrawingValues)(lineDrawingStartNode, lineDrawingEndPosition, lineDrawingEndNode);
+                }
+            });
+    }
+
+    let composedGesture;
+    if (isWeb) {
+        composedGesture = Gesture.Simultaneous(
+            pinch,
+            Gesture.Race(tap, pan, rightClickHold)
+        );
+    } else {
+        const touchGestures = Gesture.Exclusive(
+            tap,  // Highest priority - recognized first
+            pan,  // Medium priority
+            rightClickHold  // Lowest priority - only recognized if others fail
+        );
+
+        composedGesture = Gesture.Simultaneous(
+            pinch,  // Pinch can happen simultaneously (uses two fingers)
+            touchGestures  // Single touch gestures are exclusive
+        );
+    }
+
     return {
-        gesture: Gesture.Simultaneous(pan, pinch, tap, rightClickHold),
+        gesture: composedGesture,
         lineDrawingStartNode,
         lineDrawingEndPosition,
         lineDrawingEndNode,

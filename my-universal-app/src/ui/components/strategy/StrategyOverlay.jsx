@@ -15,8 +15,8 @@ export function GalaxyOverlay({ app, state, onSaveNewPoint, shiftCamera, activeT
     return (
         <>
             <GalaxyMenu />
-            <AppBar app={app}/>
-            <StrategyOptions app={app} activeTapData={activeTapData}/>
+            <AppBar app={app} horizontal={false}/>
+            <StrategyOptions app={app} activeTapData={activeTapData} />
             {state.addNewPointOpen && (
                 <AddNewPoint
                     app={app}

@@ -5,17 +5,22 @@ import {Image} from "expo-image";
 export default class LoginView extends PureComponent {
     state = { email: '', password: '', loading: false, error: null };
     submit = async () => {
-        const { app } = this.props;
         const {email, password} = this.state;
+        await this.login(email, password);
+    };
+
+    submitDemo = async () => {
+        await this.login("igor@example.com", "pyrus");
+    }
+
+    async login(email, password){
+        const { app } = this.props;
+
         if (!email || !password) return this.setState({error: "Enter email and password"});
         this.setState({loading: true, error: ""});
-        let [is_logged, error] = await app.services.auth.login({email: email, password: password})
-        if (is_logged){
-            app.view.go("myday")
-        } else {
-            this.setState({error: error, loading: false});
-        }
-    };
+        await app.services.auth.login({email: email, password: password})
+        app.start()
+    }
 
     render() {
         const {email, password, loading, error} = this.state;
@@ -39,7 +44,6 @@ export default class LoginView extends PureComponent {
                     autoCapitalize="none"
                     keyboardType="email-address"
                     returnKeyType="next"
-
                     style={styles.emailInput}
                 />
 
@@ -66,6 +70,17 @@ export default class LoginView extends PureComponent {
                         <ActivityIndicator color="#000000"/>
                     ) : (
                         <Text style={styles.loginButtonText}>Login</Text>
+                    )}
+                </TouchableOpacity>
+                <TouchableOpacity
+                    onPress={this.submitDemo}
+                    disabled={loading}
+                    style={styles.demoLoginButton}
+                >
+                    {loading ? (
+                        <ActivityIndicator color="#000000"/>
+                    ) : (
+                        <Text style={styles.demoLoginButtonText}>Demo Login</Text>
                     )}
                 </TouchableOpacity>
 
@@ -158,11 +173,27 @@ const styles = StyleSheet.create({
         marginTop: 6,
         width: "70%",
     },
+    demoLoginButton: {
+        height: 48,
+        borderRadius: 10,
+        borderColor: "#F5A300",
+        borderWidth: 2,
+        alignItems: "center",
+        justifyContent: "center",
+        marginTop: 6,
+        width: "70%",
+    },
     loginButtonText: {
         color: "#000000",
         fontSize: 18,
         fontWeight: "600"
     },
+    demoLoginButtonText: {
+        color: "#FFF",
+        fontSize: 18,
+        fontWeight: "600"
+    },
+
     bottomLabels: {
         color: "#F5A300",
         fontSize: 13

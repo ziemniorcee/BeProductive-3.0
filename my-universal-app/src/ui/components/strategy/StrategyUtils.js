@@ -31,30 +31,42 @@ export function rotTopW(p, am) {
     };
 }
 
-export function getAbsoluteNodePositions(nodes, projectsCounter, startAngle, projects) {
+function getAbsoluteNodePositions(nodes, projectsCounter, startAngle, projects) {
     'worklet';
-    const positions = []; // An array of all node copies
+    // 1. Guard Clause: Ensure data exists to prevent undefined access
+    if (!nodes || !projects) return [];
 
-    for (let i = 0; i < projectsCounter; i++) {
-        const currentProjectId = projects[i].publicId;
-        const goalsForThisProject = nodes.filter(
-            goal => goal.projectPublicId === currentProjectId
-        );
+    const positions = [];
+    const totalNodes = nodes.length;
+    const totalProjects = projects.length;
+
+    const safeLoopLimit = Math.min(projectsCounter, totalProjects);
+
+    for (let i = 0; i < safeLoopLimit; i++) {
+        const project = projects[i];
+
+        if (!project) continue;
+
+        const currentProjectId = project.publicId;
 
         const a0 = startAngle + i * (2 * Math.PI / projectsCounter);
         const a1 = a0 + (2 * Math.PI / projectsCounter);
-        const am = (a0 + a1) / 2; // The angle of this group
+        const am = (a0 + a1) / 2;
 
-        for (const n of goalsForThisProject) {
-            const start0 = {x: n.x, y: n.y};
-            const absPos = rotTopW(start0, am);
+        for (let j = 0; j < totalNodes; j++) {
+            const n = nodes[j];
 
-            positions.push({
-                publicId: n.publicId,
-                abs_x: absPos.x,
-                abs_y: absPos.y,
-                am: am,
-            });
+            if (n.projectPublicId === currentProjectId) {
+
+                const absPos = rotTopW({x: n.x, y: n.y}, am);
+
+                positions.push({
+                    publicId: n.publicId,
+                    abs_x: absPos.x,
+                    abs_y: absPos.y,
+                    am: am,
+                });
+            }
         }
     }
 
@@ -77,35 +89,96 @@ export function findHitNode(worldX, worldY, nodes, projectsCounter, startAngle, 
 }
 
 
+const isPointNearSegment = (px, py, ax, ay, bx, by, threshold) => {
+    'worklet';
+
+    // Calculate vectors using raw numbers
+    const vx = bx - ax;
+    const vy = by - ay;
+    const wx = px - ax;
+    const wy = py - ay;
+
+    const l2 = vx * vx + vy * vy; // Squared length of segment
+    const thresholdSq = threshold * threshold;
+
+    if (l2 === 0) {
+        const distSq = wx * wx + wy * wy;
+        return distSq < thresholdSq;
+    }
+
+    let t = (wx * vx + wy * vy) / l2;
+
+    // Clamp t to segment [0, 1] without calling Math.max/min functions to save overhead
+    if (t < 0) t = 0;
+    else if (t > 1) t = 1;
+
+    const closestX = ax + t * vx;
+    const closestY = ay + t * vy;
+
+    const dx = px - closestX;
+    const dy = py - closestY;
+
+    return (dx * dx + dy * dy) < thresholdSq;
+};
+
 export function findHitEdge(worldX, worldY, nodes, projectsCounter, startAngle, projects) {
+    'worklet';
+
+    if (typeof worldX !== 'number' || typeof worldY !== 'number') return null;
+
+    // Primitives
+    const px = worldX;
+    const py = worldY;
+    const HIT_THRESHOLD = 10;
+
     const nodePositions = getAbsoluteNodePositions(nodes, projectsCounter, startAngle, projects);
-    const hitPoint = {x: worldX, y: worldY};
 
-    const posMap = new Map(nodePositions.map(n => [n.publicId, n]));
+    // Fast Lookups (Objects)
+    const posMap = {};
+    const nodeDataMap = {};
 
-    const nodeDataMap = new Map(nodes.map(n => [n.publicId, n]));
+    for (let i = 0; i < nodePositions.length; i++) {
+        const item = nodePositions[i];
+        if (item?.publicId) posMap[item.publicId] = item;
+    }
 
+    for (let i = 0; i < nodes.length; i++) {
+        const item = nodes[i];
+        if (item?.publicId) nodeDataMap[item.publicId] = item;
+    }
+
+    // Main Loop
     for (let i = nodePositions.length - 1; i >= 0; i--) {
         const parentPosNode = nodePositions[i];
+        const parentDataNode = nodeDataMap[parentPosNode.publicId];
 
-        const parentDataNode = nodeDataMap.get(parentPosNode.publicId);
+        // Validate Parent
+        if (!parentDataNode || !Array.isArray(parentDataNode.children) || parentDataNode.children.length === 0) {
+            continue;
+        }
 
-        if (!parentDataNode || !parentDataNode.children) continue;
+        const ax = parentPosNode.abs_x;
+        const ay = parentPosNode.abs_y;
+
+        if (typeof ax !== 'number' || typeof ay !== 'number') continue;
 
         const childrenIds = parentDataNode.children;
-        const parentPos = {x: parentPosNode.abs_x, y: parentPosNode.abs_y};
 
         for (let j = 0; j < childrenIds.length; j++) {
             const childId = childrenIds[j];
+            if (!childId) continue;
 
-            const childPosNode = posMap.get(childId);
-
+            const childPosNode = posMap[childId];
             if (!childPosNode) continue;
 
-            const childPos = {x: childPosNode.abs_x, y: childPosNode.abs_y};
+            // Validate Child
+            const bx = childPosNode.abs_x;
+            const by = childPosNode.abs_y;
 
-            if (wasHitLineSegment(hitPoint, parentPos, childPos, 10)) {
+            if (typeof bx !== 'number' || typeof by !== 'number') continue;
 
+            // Call the local helper function
+            if (isPointNearSegment(px, py, ax, ay, bx, by, HIT_THRESHOLD)) {
                 return {
                     "parentPublicId": parentPosNode.publicId,
                     "childPublicId": childPosNode.publicId
@@ -115,42 +188,4 @@ export function findHitEdge(worldX, worldY, nodes, projectsCounter, startAngle, 
     }
 
     return null;
-}
-
-/**
- * Checks if a point 'p' is within 'threshold' distance of a line segment 'a'-'b'.
- * All arguments are 'worklet' compatible objects {x, y}.
- */
-function wasHitLineSegment(p, a, b, threshold) {
-    'worklet';
-
-    const v = { x: b.x - a.x, y: b.y - a.y }; // Vector from a to b
-    const w = { x: p.x - a.x, y: p.y - a.y }; // Vector from a to p
-
-    const l2 = v.x * v.x + v.y * v.y; // Squared length of the segment
-
-    // Handle degenerate case (segment is a single point)
-    if (l2 === 0) {
-        const distSq = w.x * w.x + w.y * w.y; // Squared distance from p to a
-        return distSq < threshold * threshold;
-    }
-
-    // Find the projection of p onto the line, clamped to the segment
-    // t is the scalar projection parameter, clamped to [0, 1]
-    let t = (w.x * v.x + w.y * v.y) / l2;
-    t = Math.max(0, Math.min(1, t)); // Clamp to segment
-
-    // Find the closest point on the segment
-    const closestPoint = {
-        x: a.x + t * v.x,
-        y: a.y + t * v.y,
-    };
-
-    // Calculate squared distance from p to the closest point
-    const dx = p.x - closestPoint.x;
-    const dy = p.y - closestPoint.y;
-    const distSq = dx * dx + dy * dy;
-
-    // Return true if within the squared threshold
-    return distSq < threshold * threshold;
 }

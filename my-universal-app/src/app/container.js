@@ -20,26 +20,12 @@ export function createApp(opts = {}) {
         const authed = await app.services.auth.is_token_valid();
         if (!authed) { app.view.go("login"); return; }
 
-
-        // fire loads without screen changes
         await app.services.categories.reload();
         await app.services.projects.reload();
 
-        // app.view.go("myday"); //normal state
-        app.view.go("strategy");
+        app.view.go("myday");
+        // app.view.go("strategy");
 
-        //
-        // try {
-        //     await Promise.all([
-        //         app.services.categories.reload(),
-        //         app.services.projects.reload(),
-        //     ]);
-        //     await app.services.myday.load(); // fetch after metadata
-        //     app.view.go("strategy");
-        // } catch (e) {
-        //     // handle error, keep user on a safe screen
-        //     app.view.go("login");
-        // }
     };
 
     return app;
