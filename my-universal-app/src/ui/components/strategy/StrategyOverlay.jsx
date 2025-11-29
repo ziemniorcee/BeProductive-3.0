@@ -1,4 +1,3 @@
-// InfiniteGalaxy/GalaxyOverlay.jsx
 import React from 'react';
 import AppBar from "../common/appBar/AppBar";
 import GalaxyMenu from "./StrategyMenu";
@@ -14,8 +13,8 @@ export function GalaxyOverlay({ app, state, onSaveNewPoint, shiftCamera, activeT
 
     return (
         <>
-            <GalaxyMenu />
             <AppBar app={app} horizontal={false}/>
+            <GalaxyMenu />
             <StrategyOptions app={app} activeTapData={activeTapData} />
             {state.addNewPointOpen && (
                 <AddNewPoint

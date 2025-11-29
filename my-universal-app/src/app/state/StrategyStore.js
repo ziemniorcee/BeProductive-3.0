@@ -78,7 +78,6 @@ export class StrategyStore {
             return;
         }
 
-
         const currentGoals = this.state.goals ?? [];
 
         this._set({
@@ -133,7 +132,6 @@ export class StrategyStore {
     }
 
     removeEdge = (startNodeId, endNodeId) => {
-        console.log(startNodeId, endNodeId, "removeEdge")
         const currentGoals = this.state.goals ?? [];
         const newGoals = currentGoals.map(goal => {
             if (goal.publicId !== startNodeId) {

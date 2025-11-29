@@ -1,5 +1,7 @@
 import React from "react";
 import TodoCore from "../components/todo/common/TodoCore";
+import * as ScreenOrientation from "expo-screen-orientation";
+import {Platform} from "react-native";
 
 export default function DayScreen({app, date}) {
     const [state, setState] = React.useState(() => app.services.myday.get());
@@ -19,6 +21,13 @@ export default function DayScreen({app, date}) {
 
         return () => unsub?.();
     }, [app]);
+
+    React.useEffect(() => {
+        const isWeb = Platform.OS === "web";
+
+        if (isWeb) return;
+        ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+    }, []);
 
     const {goals = [], loading = true, error} = state;
     return (

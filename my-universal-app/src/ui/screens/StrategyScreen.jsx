@@ -36,8 +36,7 @@ export default function StrategyScreen({app}) {
     React.useEffect(() => {
         if (isWeb) return;
         ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
-        return () =>
-            ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+
     }, []);
 
 

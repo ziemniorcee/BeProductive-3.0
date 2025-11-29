@@ -10,6 +10,7 @@ import AppBar from "../components/common/appBar/AppBar";
 import EditTask from "../components/todo/edit/EditTask";
 import {SafeAreaView} from "react-native-safe-area-context";
 import MonthCalendar from "../components/todo/month/MonthCalendar";
+import * as ScreenOrientation from "expo-screen-orientation";
 
 function addMonths(date, delta) {
 
@@ -55,6 +56,13 @@ export default function MonthScreen({app, date=null}) {
     const m = now.getMonth();
 
     const toISODate = (y, m0, d) => `${y}-${pad(m0 + 1)}-${pad(d)}`;
+
+    React.useEffect(() => {
+        const isWeb = Platform.OS === "web";
+
+        if (isWeb) return;
+        ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+    }, []);
 
     return (
         <MyDayProvider app={app}>

@@ -57,6 +57,7 @@ export function makeStrategyRepo({http}) {
                 const errText = await res.text().catch(() => '');
                 throw new Error(`strategy.delete-node ${res.status} ${errText}`);
             }
+
         },
 
         async removeEdge(parentPublicId, childPublicId) {

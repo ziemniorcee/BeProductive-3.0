@@ -5,7 +5,6 @@ import AppBarCore from "./AppBarCore";
 
 export default function AppBar({app, horizontal}) {
     const isWeb = Platform.OS === 'web';
-    console.log(isWeb, horizontal)
 
     if (isWeb || horizontal) {
         return (<AppBarCore app={app} horizontal/>);
@@ -29,6 +28,6 @@ const styles = StyleSheet.create({
         right: Platform.select({web: 30, default: 0}),
         justifyContent: 'center',   // vertical center
         alignItems: 'flex-end',     // to the right
-        zIndex: 1000,
+        zIndex: 1,
     }
 })

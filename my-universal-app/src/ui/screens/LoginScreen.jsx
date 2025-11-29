@@ -1,11 +1,19 @@
 // packages/ui/screens/LoginScreen.jsx
 import React from "react";
-import { View, StyleSheet } from "react-native";
+import {View, StyleSheet, Platform} from "react-native";
 import { Image } from "expo-image";
 import LoginView from "../components/auth/LoginView";
 import Vignette from "../components/common/Vignette";
+import * as ScreenOrientation from "expo-screen-orientation";
 
 export function LoginScreen({ app }) {
+    React.useEffect(() => {
+        const isWeb = Platform.OS === "web";
+
+        if (isWeb) return;
+        ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+    }, []);
+
     return (
         <View style={styles.screen}>
             <Image source={require("../../../assets/galaxybg.jpg")} style={StyleSheet.absoluteFillObject} />

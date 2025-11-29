@@ -1,5 +1,7 @@
 import React from "react";
 import TodoCore from "../components/todo/common/TodoCore";
+import {Platform} from "react-native";
+import * as ScreenOrientation from "expo-screen-orientation";
 
 export default function InboxScreen({app}) {
     const [state, setState] = React.useState(() => app.services.myday.get());
@@ -14,6 +16,13 @@ export default function InboxScreen({app}) {
         return () => unsub?.();
     }, [app]);
     const {goals = [], loading = true} = state;
+
+    React.useEffect(() => {
+        const isWeb = Platform.OS === "web";
+
+        if (isWeb) return;
+        ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+    }, []);
 
     return (
         <TodoCore app={app} type={"Inbox"} goals={goals} loading={loading} state={state}/>

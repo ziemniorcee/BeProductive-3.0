@@ -113,9 +113,9 @@ export default function StrategyCore({app, state, nodesShared, children}) {
             <GalaxyOverlay
                 app={app}
                 state={state}
+                onSaveNewPoint={(pointData) => app.services.strategy.saveNewPoint(pointData)}
                 shiftCamera={shiftCamera}
                 activeTapData={activeTapData}
-                onSaveNewPoint={(pointData) => app.services.strategy.saveNewPoint(pointData)}
             />
         </GestureHandlerRootView>
     );
