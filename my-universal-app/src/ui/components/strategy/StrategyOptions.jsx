@@ -16,8 +16,6 @@ export default function StrategyOptions({app, activeTapData}) {
         if (!activeTapData.value?.parentPublicId) {
             return {
                 opacity: withTiming(0),
-                transform: [{ scale: 0 }],
-                left: -1000, // Move it off-screen
             };
         }
 

@@ -121,15 +121,16 @@ const isPointNearSegment = (px, py, ax, ay, bx, by, threshold) => {
     return (dx * dx + dy * dy) < thresholdSq;
 };
 
-export function findHitEdge(worldX, worldY, nodes, projectsCounter, startAngle, projects) {
+export function findHitEdge(worldX, worldY, nodes, projectsCounter, startAngle, projects, isWeb) {
     'worklet';
 
     if (typeof worldX !== 'number' || typeof worldY !== 'number') return null;
 
+
     // Primitives
     const px = worldX;
     const py = worldY;
-    const HIT_THRESHOLD = 10;
+    const HIT_THRESHOLD = isWeb ? 10 : 35;
 
     const nodePositions = getAbsoluteNodePositions(nodes, projectsCounter, startAngle, projects);
 

@@ -71,8 +71,8 @@ const generate = (app, am, nodes) => {
     for (const n of nodes) {
         const start0 = {x: n.x, y: n.y};
         const start = rotTop(start0, am);
+        for (const c of (n.children ?? []).filter(Boolean)) {
 
-        for (const c of (n.children ?? [])) {
             const childId = typeof c === 'object' ? c.publicId : c;
             const child = nodes.find(x => x.publicId === childId);
 
@@ -226,7 +226,6 @@ function StrategyContent({
 
             const cx = (rC + L) * Math.cos(am);
             const cy = (rC + L) * Math.sin(am);
-
             return {
                 id: projects[i].publicId,
                 name: projects[i].name,

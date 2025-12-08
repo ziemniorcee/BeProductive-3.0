@@ -242,7 +242,7 @@ export function useStrategyGestures({
             return;
         }
 
-        const hitEdge = findHitEdge(worldX, worldY, nodes, projectsCounter, startAngle, projects);
+        const hitEdge = findHitEdge(worldX, worldY, nodes, projectsCounter, startAngle, projects, isWeb);
 
         if (hitEdge) {
             const type = "edge";
