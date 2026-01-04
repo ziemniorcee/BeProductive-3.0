@@ -23,7 +23,11 @@
       },
       "package": "com.anonymous.myuniversalapp"
     },
-    "androidStatusBar": {  "hidden": true, "translucent": true, "backgroundColor": "#000000" },
+    "androidStatusBar": {
+      "hidden": true,
+      "translucent": true,
+      "backgroundColor": "#000000"
+    },
     "web": {
       "bundler": "metro"
     },
@@ -31,6 +35,11 @@
     "androidNavigationBar": {
       "backgroundColor": "#000000",
       "barStyle": "light-content"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "2550c71b-e950-4c01-94d0-75469f706d03"
+      }
     }
   }
 }

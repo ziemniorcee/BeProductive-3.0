@@ -1,181 +1,243 @@
 import * as RNSVG from "react-native-svg";
 import React, {useEffect, useMemo} from "react";
-import {SvgXml} from 'react-native-svg';
-import Node from "./Node";
-import {cleanSvgXml} from "../../../util/svgClean";
-import Edge from "./Edge";
-import {StyleSheet, Text, View} from "react-native";
-import {useStrategy} from "../../context/StrategyContext";
 import Animated, {useAnimatedProps} from "react-native-reanimated";
+import { Delaunay } from "d3-delaunay";
 
-const sep = 15;
+import Node from "./Node";
+import Edge from "./Edge";
+import {useStrategy} from "../../context/StrategyContext";
+
+// --- CONFIGURATION ---
 const CIRCLE_CENTER = {R: 140, D: 200};
-const CIRCLE_OUTER = {R: 4000,};
+const CIRCLE_OUTER = {R: 4000};
 const AnimatedLine = Animated.createAnimatedComponent(RNSVG.Line);
 
-const lineWidth = 2;
-const R = CIRCLE_OUTER.R;
+// Helper to darken a hex or rgb color
+const darkenColor = (color, percent) => {
+    let r, g, b;
 
-const wedgeD = (r, a0, a1) => {
-    const x0 = r * Math.cos(a0), y0 = r * Math.sin(a0);
-    const x1 = r * Math.cos(a1), y1 = r * Math.sin(a1);
-    return `M0,0 L${x0},${y0} A ${r} ${r} 0 0 1 ${x1},${y1} Z`;
+    if (color.startsWith('#')) {
+        r = parseInt(color.substring(1, 3), 16);
+        g = parseInt(color.substring(3, 5), 16);
+        b = parseInt(color.substring(5, 7), 16);
+    } else if (color.startsWith('rgb')) {
+        const matches = color.match(/\d+/g);
+        if (matches && matches.length >= 3) {
+            [r, g, b] = matches.map(Number);
+        } else {
+            return color;
+        }
+    } else {
+        return color;
+    }
+
+    r = Math.max(0, Math.floor(r * (1 - percent)));
+    g = Math.max(0, Math.floor(g * (1 - percent)));
+    b = Math.max(0, Math.floor(b * (1 - percent)));
+
+    return `rgb(${r}, ${g}, ${b})`;
 };
 
-const pair = (a, colPrev, colCurr, keyBase) => {
-    const ca = Math.cos(a), sa = Math.sin(a);
-    const nx = -Math.sin(a), ny = Math.cos(a);
-    const o = sep / 2;
+const getAngleDiff = (a1, a2) => {
+    let diff = a1 - a2;
+    while (diff > Math.PI) diff -= 2 * Math.PI;
+    while (diff < -Math.PI) diff += 2 * Math.PI;
+    return diff;
+};
 
-    const x0 = 0, y0 = 0;
-    const x1 = R * ca, y1 = R * sa;
+// --- VORONOI COMPONENT ---
+const VoronoiBackground = React.memo(({ app, nodes }) => {
+
+    const { projectGroups, borderPath } = useMemo(() => {
+        if (!nodes || nodes.length === 0) return { projectGroups: [], borderPath: "" };
+
+        // 1. Prepare Node Metadata
+        const nodeMeta = nodes.map((n, i) => ({
+            index: i,
+            x: n.x,
+            y: n.y,
+            r: Math.hypot(n.x, n.y),
+            angle: Math.atan2(n.y, n.x),
+            projectId: n.projectPublicId || 'unknown'
+        }));
+
+        const points = [];
+        const pointMeta = [];
+
+        const addPoint = (x, y, projectId) => {
+            points.push([x, y]);
+            pointMeta.push({ projectId });
+        };
+
+        // 2. Generate Points (Territory Logic)
+        nodeMeta.forEach(current => {
+            addPoint(current.x, current.y, current.projectId);
+
+            let rayStart = CIRCLE_CENTER.R;
+            let rayEnd = CIRCLE_OUTER.R;
+
+            nodeMeta.forEach(other => {
+                if (current.index === other.index) return;
+
+                const angleDiff = Math.abs(getAngleDiff(current.angle, other.angle));
+                const distBetween = Math.abs(current.r - other.r);
+                const baseRadius = Math.min(current.r, other.r);
+                const centerDist = Math.max(0, baseRadius - CIRCLE_CENTER.R);
+                const decayFactor = Math.max(0, 1 - (centerDist / 1000));
+                const DOMINANCE = 0.5 + (0.4 * decayFactor);
+
+                if (other.r < current.r) {
+                    const shyAngle = 0.25 + (0.35 * decayFactor);
+                    if (angleDiff < shyAngle) {
+                        const idealStart = other.r + (distBetween * DOMINANCE);
+                        const safeStart = idealStart + 10;
+                        if (safeStart > rayStart) rayStart = safeStart;
+                    }
+                }
+                else {
+                    const BOLD_THRESHOLD = 0.25;
+                    if (angleDiff < BOLD_THRESHOLD) {
+                        const idealLimit = current.r + (distBetween * DOMINANCE);
+                        const safeLimit = idealLimit - 10;
+                        if (safeLimit < rayEnd) rayEnd = safeLimit;
+                    }
+                }
+            });
+
+            if (rayEnd > rayStart + 15) {
+                const length = rayEnd - rayStart;
+                const density = (rayStart < CIRCLE_CENTER.R + 250) ? 20 : 60;
+                const steps = Math.max(5, Math.floor(length / density));
+
+                for (let i = 0; i <= steps; i++) {
+                    const t = i / steps;
+                    const r = rayStart + (length * t);
+                    if (Math.abs(r - current.r) < 15) continue;
+                    const gx = Math.cos(current.angle) * r;
+                    const gy = Math.sin(current.angle) * r;
+                    addPoint(gx, gy, current.projectId);
+                }
+            }
+        });
+
+        // 3. Compute Voronoi & Delaunay
+        const R = CIRCLE_OUTER.R;
+        const bounds = [-R, -R, R, R];
+        const delaunay = Delaunay.from(points);
+        const voronoi = delaunay.voronoi(bounds);
+
+        // --- GROUPING FOR FILLS ---
+        const groups = {};
+        for (let i = 0; i < points.length; i++) {
+            const pId = pointMeta[i].projectId;
+            const pathD = voronoi.renderCell(i);
+
+            if (!groups[pId]) {
+                let color = "rgb(180, 180, 180)";
+                if (pId !== 'unknown') {
+                    const project = app.services.projects.getByPublicId(pId);
+                    if (project) {
+                        color = app.services.categories.colorByPublicId(project.categoryPublicId);
+                    }
+                }
+                const darkColor = darkenColor(color, 0.9 );
+                groups[pId] = { color: darkColor, paths: [] };
+            }
+            groups[pId].paths.push(pathD);
+        }
+
+        // --- CALCULATING BORDERS ---
+        // We iterate Delaunay edges. If an edge connects two points of DIFFERENT projects,
+        // we draw the corresponding Voronoi boundary.
+        const borderSegments = [];
+        const { halfedges, triangles } = delaunay;
+        const { circumcenters } = voronoi;
+
+        for (let i = 0; i < halfedges.length; i++) {
+            const j = halfedges[i];
+            // Check each pair only once (i < j) and ignore hull edges (j = -1)
+            if (j > i) {
+                const pIndex = triangles[i];
+                const qIndex = triangles[j];
+
+                // Are they different projects?
+                if (pointMeta[pIndex].projectId !== pointMeta[qIndex].projectId) {
+                    // Identify the two triangles sharing this edge
+                    const t1 = Math.floor(i / 3);
+                    const t2 = Math.floor(j / 3);
+
+                    // Get their circumcenters (the vertices of the Voronoi edge)
+                    const x1 = circumcenters[t1 * 2];
+                    const y1 = circumcenters[t1 * 2 + 1];
+                    const x2 = circumcenters[t2 * 2];
+                    const y2 = circumcenters[t2 * 2 + 1];
+
+                    borderSegments.push(`M${x1},${y1}L${x2},${y2}`);
+                }
+            }
+        }
+
+        return {
+            projectGroups: Object.values(groups),
+            borderPath: borderSegments.join(" ")
+        };
+    }, [nodes, app]);
 
     return (
-        <RNSVG.G key={keyBase}>
-            <RNSVG.Line
-                x1={x0 - o * nx} y1={y0 - o * ny}
-                x2={x1 - o * nx} y2={y1 - o * ny}
-                stroke={colPrev} strokeWidth={lineWidth}
-                strokeLinecap="round" vectorEffect="non-scaling-stroke"
-            />
-            <RNSVG.Line
-                x1={x0 + o * nx} y1={y0 + o * ny}
-                x2={x1 + o * nx} y2={y1 + o * ny}
-                stroke={colCurr} strokeWidth={lineWidth}
-                strokeLinecap="round" vectorEffect="non-scaling-stroke"
+        <RNSVG.G clipPath="url(#map-clip)">
+            {/* 1. RENDER FILLS (No Strokes) */}
+            {projectGroups.map((group, index) => (
+                <RNSVG.Path
+                    key={`group-${index}`}
+                    d={group.paths.join(" ")}
+                    fill={group.color}
+                    fillOpacity={0.6}
+                    stroke="none"
+                />
+            ))}
+
+            {/* 2. RENDER BORDERS (Overlay for different projects only) */}
+            <RNSVG.Path
+                d={borderPath}
+                fill="none"
+                stroke="#FFF"
+                strokeWidth={4}
+                strokeLinecap="round"
+                strokeLinejoin="round"
             />
         </RNSVG.G>
     );
-};
-
-const midRadial = (app, a0, a1, i, nodes) => {
-    const am = (a0 + a1) / 2;
-    return (
-        <RNSVG.G key={`midRadial-${i}`}>
-            {generate(app, am, nodes)}
-        </RNSVG.G>
-    );
-};
-
-const rot = ({x, y}, t) => ({
-    x: x * Math.cos(t) - y * Math.sin(t),
-    y: x * Math.sin(t) + y * Math.cos(t)
 });
 
-const rotTop = (p, am) => rot(p, am + Math.PI / 2);
+// --- MAIN CONTENT ---
 
-const generate = (app, am, nodes) => {
+const generate = (app, nodes) => {
     const edges = [];
     const nodesOut = [];
 
     for (const n of nodes) {
         const start0 = {x: n.x, y: n.y};
-        const start = rotTop(start0, am);
         for (const c of (n.children ?? []).filter(Boolean)) {
-
             const childId = typeof c === 'object' ? c.publicId : c;
             const child = nodes.find(x => x.publicId === childId);
-
             if (!child) continue;
-
-            const end0 = {x: child.x, y: child.y};
-            const end = rotTop(end0, am);
-
-            edges.push(
-                <Edge key={`edge-${n.publicId}-${childId}`} start={start} end={end}/>
-            );
+            edges.push(<Edge key={`edge-${n.publicId}-${childId}`} start={start0} end={{x: child.x, y: child.y}}/>);
         }
 
         let nodeColor = "#FFF";
         if (n.taskType === 0) {
             const project = app.services.projects.getByPublicId(n.projectPublicId);
-            if (project) {
-                nodeColor = app.services.categories.colorByPublicId(project.categoryPublicId);
-            }
+            if (project) nodeColor = app.services.categories.colorByPublicId(project.categoryPublicId);
         }
 
         nodesOut.push(
-            <Node
-                key={`node-${n.publicId}`}
-                start={start}
-                color={nodeColor}
-                title={n.name}
-                type={n.taskType}
-            />
+            <Node key={`node-${n.publicId}`} start={start0} color={nodeColor} title={n.name} type={n.taskType} />
         );
     }
-
-    // Return the combined array, with all edges first, then all nodes
     return [...edges, ...nodesOut];
 };
 
-
-const projectImage = (a0, a1, i, color, project) => {
-    const am = (a0 + a1) / 2;
-    const L = 1000;
-    const rC = CIRCLE_CENTER.R;
-
-    const W = 512;
-    const FS = 100;
-    const cx = (rC + L) * Math.cos(am);
-    const cy = (rC + L) * Math.sin(am);
-
-    return (
-        <RNSVG.G key={`projectImage-${i}`} transform={`translate(${cx - W / 2}, ${cy - W / 2})`}>
-            {/* icon */}
-            <RNSVG.G transform={`translate(${W / 2}, ${-FS * 0.35})`}>
-                <RNSVG.Text
-                    // negative y = above the box
-                    fill={color}
-                    fontSize={FS}
-                    fontFamily="sans-serif"
-                    fontWeight="700"
-                    textAnchor="middle"
-                    alignmentBaseline="baseline"
-                >
-                    {project.name}
-                </RNSVG.Text>
-            </RNSVG.G>
-            <SvgXml
-                xml={project.svgIcon}
-                width={W}
-                height={W}
-                color={color}
-                preserveAspectRatio="xMidYMid meet"
-            />
-        </RNSVG.G>
-    );
-};
-
-function darkenHexColor(hex, percent = 60) {
-    let cleanHex = hex.startsWith('#') ? hex.slice(1) : hex;
-
-    if (cleanHex.length === 3) {
-        cleanHex = cleanHex.split('').map(char => char + char).join('');
-    }
-
-    const hexValue = parseInt(cleanHex, 16) || 0;
-
-    const factor = Math.max(0, Math.min(1, (100 - percent) / 100));
-
-    const r = (hexValue >> 16) & 0xFF;
-    const g = (hexValue >> 8) & 0xFF;
-    const b = hexValue & 0xFF;
-
-    const rHex = Math.round(r * factor).toString(16).padStart(2, '0');
-    const gHex = Math.round(g * factor).toString(16).padStart(2, '0');
-    const bHex = Math.round(b * factor).toString(16).padStart(2, '0');
-
-    return `#${rHex}${gHex}${bHex}`;
-}
-
-function StrategyContent({
-                             app,
-                             lineDrawingStartNode,
-                             lineDrawingEndPosition,
-                             lineDrawingEndNode,
-                             scale
-                         }) {
+function StrategyContent({ app, lineDrawingStartNode, lineDrawingEndPosition, lineDrawingEndNode, scale }) {
     const {state, setProjectPositions} = useStrategy();
     const projectsCounter = 5;
     const start = Math.PI / 2 + Math.PI * 2 / projectsCounter * 3;
@@ -186,19 +248,11 @@ function StrategyContent({
         if (!lineDrawingStartNode || !lineDrawingStartNode.value ||
             !lineDrawingEndPosition || !lineDrawingEndPosition.value ||
             !scale || !scale.value) {
-
-            return {
-                x1: 0, y1: 0, x2: 0, y2: 0,
-                strokeWidth: 2 / scale.value,
-                stroke: '#717171',
-            };
+            return { x1: 0, y1: 0, x2: 0, y2: 0, strokeWidth: 2 / scale.value, stroke: '#717171' };
         }
-
         const startX = lineDrawingStartNode.value.x;
         const startY = lineDrawingStartNode.value.y;
-
         let endX, endY;
-
         if (lineDrawingEndNode && lineDrawingEndNode.value) {
             endX = lineDrawingEndNode.value.x;
             endY = lineDrawingEndNode.value.y;
@@ -206,15 +260,8 @@ function StrategyContent({
             endX = lineDrawingEndPosition.value.x;
             endY = lineDrawingEndPosition.value.y;
         }
-
-        return {
-            x1: startX,
-            y1: startY,
-            x2: endX,
-            y2: endY,
-        };
+        return { x1: startX, y1: startY, x2: endX, y2: endY };
     });
-
 
     const calculatedPositions = useMemo(() => {
         return Array.from({length: projectsCounter}, (_, i) => {
@@ -222,7 +269,7 @@ function StrategyContent({
             const a1 = a0 + (2 * Math.PI / projectsCounter);
             const am = (a0 + a1) / 2;
             const L = 1000;
-            const rC = CIRCLE_CENTER.R; // Make sure CIRCLE_CENTER is defined
+            const rC = CIRCLE_CENTER.R;
 
             const cx = (rC + L) * Math.cos(am);
             const cy = (rC + L) * Math.sin(am);
@@ -236,52 +283,22 @@ function StrategyContent({
     }, [projects, projectsCounter, start]);
 
     useEffect(() => {
-        setProjectPositions(calculatedPositions); // <-- 2. Here is the "save"
-
+        setProjectPositions(calculatedPositions);
     }, [calculatedPositions, setProjectPositions]);
 
     return (
         <RNSVG.G>
-            {Array.from({length: projectsCounter}, (_, i) => {
-                const a0 = start + i * (2 * Math.PI / projectsCounter);
-                const a1 = a0 + (2 * Math.PI / projectsCounter);
-                let color = app.services.categories.colorByPublicId(app.services.projects.getByPublicId(projects[i].publicId).categoryPublicId)
+            <RNSVG.Defs>
+                <RNSVG.ClipPath id="map-clip">
+                    <RNSVG.Circle cx={0} cy={0} r={CIRCLE_OUTER.R} />
+                </RNSVG.ClipPath>
+            </RNSVG.Defs>
 
-                return <RNSVG.Path key={`w-${i}`} d={wedgeD(R, a0, a1)} fill={darkenHexColor(color, 98)}/>;
-            })}
-
-            {Array.from({length: projectsCounter}, (_, i) => {
-                const a = start + i * (2 * Math.PI / projectsCounter);
-                const prev = (i - 1 + projectsCounter) % projectsCounter;
-                let color_prev = app.services.categories.colorByPublicId(app.services.projects.getByPublicId(projects[prev].publicId).categoryPublicId)
-                let color = app.services.categories.colorByPublicId(app.services.projects.getByPublicId(projects[i].publicId).categoryPublicId)
-                return pair(a, color_prev, color, `b-${i}`);
-            })}
-
-            {calculatedPositions.map((pos, i) => {
-                const a0 = start + i * (2 * Math.PI / projectsCounter);
-                const a1 = a0 + (2 * Math.PI / projectsCounter);
-                let color = app.services.categories.colorByPublicId(app.services.projects.getByPublicId(projects[i].publicId).categoryPublicId)
-
-                return projectImage(
-                    a0, a1, `img-${i}`,
-                    darkenHexColor(color, 60),
-                    projects[i]
-                );
-            })}
             <AnimatedLine animatedProps={animatedLineProps}/>
 
+            <VoronoiBackground app={app} nodes={state.goals} />
 
-            {Array.from({length: projectsCounter}, (_, i) => {
-                const a0 = start + i * (2 * Math.PI / projectsCounter);
-                const a1 = a0 + (2 * Math.PI / projectsCounter);
-
-                const currentProjectId = projects[i].publicId;
-                const goalsForThisProject = state.goals.filter(
-                    goal => goal.projectPublicId === currentProjectId
-                );
-                return midRadial(app, a0, a1, `mid-${i}`, goalsForThisProject);
-            })}
+            { generate(app, state.goals) }
 
             <RNSVG.Circle cx={0} cy={0} r={CIRCLE_CENTER.R} fill="#000" stroke="#FFF" strokeWidth={4}/>
             <RNSVG.Image
