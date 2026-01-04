@@ -1,5 +1,5 @@
 import React from "react";
-import {View, Text, Pressable, StyleSheet, TextInput, useWindowDimensions} from "react-native";
+import {View, Text, Pressable, StyleSheet, TextInput, ActivityIndicator} from "react-native";
 import {Image} from "expo-image";
 import {useMyDay} from "../../../context/MyDayContext";
 import {CheckboxMain} from "../common/CheckboxMain";
@@ -16,6 +16,15 @@ export default function EditTaskPanelWeb({app}) {
     const task = state.editTask;
     const [note, setNote] = React.useState(task.note ?? "");
 
+    // Loading state for the AI button
+    const [isPredicting, setIsPredicting] = React.useState(false);
+    // State to hold the predicted IDs
+    const [prediction, setPrediction] = React.useState(null);
+
+    React.useEffect(() => {
+        setPrediction(null);
+    }, [task.categoryPublicId, task.projectPublicId]);
+
     const changeName = React.useCallback((t) => {
         patchEdit({name: t});
     }, [patchEdit]);
@@ -26,12 +35,95 @@ export default function EditTaskPanelWeb({app}) {
     const [h, setH] = React.useState(LINE_H);
     const [w, setW] = React.useState(0);
 
-// measure fn
     const onMeasure = React.useCallback(e => {
         const H = e.nativeEvent.layout.height || LINE_H;
         setH(Math.min(H, LINE_H * MAX_LINES));
     }, []);
 
+    // --- AI PREDICTION LOGIC ---
+    const predict = async () => {
+        if (!task.name || isPredicting) return;
+
+        setIsPredicting(true);
+
+        try {
+            const candidateList = [];
+            const categories = app.services.categories.get().byPublicId;
+            const projects = app.services.projects.get().byPublicId;
+
+            for (const [id, item] of Object.entries(projects)) {
+                // Handle cases where category might be missing
+                if (!categories[item.categoryPublicId]) continue;
+
+                const catName = categories[item.categoryPublicId].name;
+                candidateList.push(`${catName}: ${item.name}`);
+            }
+
+            if (candidateList.length === 0) {
+                alert("Please create some projects or categories first!");
+                setIsPredicting(false);
+                return;
+            }
+
+            const response = await fetch("https://goal-classifier-965384144322.europe-west3.run.app/predict", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    task: task.name,
+                    projects: candidateList
+                })
+            });
+
+            const data = await response.json();
+            const predictedString = data.category;
+            console.log("AI Chose:", predictedString);
+
+            let foundProjectPublicId = null;
+            let foundCategoryPublicId = null;
+
+            // Iterate through projects again to find the matching ID
+            for (const [pId, pItem] of Object.entries(projects)) {
+                const parentCategory = categories[pItem.categoryPublicId];
+                if (!parentCategory) continue;
+
+                // Recreate the string format to match exact output
+                const currentCandidate = `${parentCategory.name}: ${pItem.name}`;
+
+                if (currentCandidate === predictedString) {
+                    foundProjectPublicId = pId;
+                    foundCategoryPublicId = pItem.categoryPublicId;
+                    break;
+                }
+            }
+
+            if (foundProjectPublicId) {
+                console.log("Found Project ID:", foundProjectPublicId);
+
+                // 1. Update local state to show prediction immediately
+                setPrediction({
+                    categoryPublicId: foundCategoryPublicId,
+                    projectPublicId: foundProjectPublicId
+                });
+
+                // 2. Save the changes to the actual task data
+                patchEdit({
+                    categoryPublicId: foundCategoryPublicId,
+                    projectPublicId: foundProjectPublicId
+                });
+            } else {
+                console.warn("Could not match prediction to a known project.");
+            }
+
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsPredicting(false);
+        }
+    };
+
+    // Determine which IDs to display: Prediction first, fallback to Task
+    const displayCategoryId = prediction?.categoryPublicId ?? task.categoryPublicId;
+    const displayProjectId = prediction?.projectPublicId ?? task.projectPublicId;
 
     return (
         <View style={s.win}>
@@ -53,10 +145,9 @@ export default function EditTaskPanelWeb({app}) {
                                 pointerEvents: 'none',
                                 width: w || '100%',
                                 lineHeight: LINE_H,
-                                whiteSpace: 'pre-wrap',   // RN Web
+                                whiteSpace: 'pre-wrap',
                                 wordBreak: 'break-word',
                             }]}
-                            // re-measure when width or text changes
                             key={`m-${Math.round(w)}-${task.name.length}`}
                         >
                             {task.name || ' '}
@@ -65,7 +156,7 @@ export default function EditTaskPanelWeb({app}) {
                         <TextInput
                             spellCheck={false}
                             multiline
-                            numberOfLines={1} // rows=1 on web
+                            numberOfLines={1}
                             value={task.name}
                             onChangeText={changeName}
                             scrollEnabled={false}
@@ -82,6 +173,20 @@ export default function EditTaskPanelWeb({app}) {
                                 overflow: 'hidden',
                             }]}
                         />
+
+                        <Pressable
+                            onPress={predict}
+                            style={{position: "relative", left: 10, top: 5, width: 30, height: 30, justifyContent: 'center', alignItems: 'center'}}
+                        >
+                            {isPredicting ? (
+                                <ActivityIndicator size="small" color={C.mid} />
+                            ) : (
+                                <Image
+                                    source={require("../../../../../assets/ai.png")}
+                                    style={{width: 30, height: 30}}
+                                />
+                            )}
+                        </Pressable>
                     </View>
 
                     <View style={s.noteWrap}>
@@ -98,15 +203,16 @@ export default function EditTaskPanelWeb({app}) {
                         />
                     </View>
 
-                    {/* steps moved out */}
                     <StepsEditor app={app} color={importanceColor}/>
                 </View>
 
                 <View style={s.divider}/>
 
                 <View style={s.right}>
-                    <CategoryPicker app={app} id={task.categoryPublicId}/>
-                    <ProjectPicker app={app} id={task.projectPublicId}/>
+                    {/* UPDATED PICKERS: Prioritize Prediction IDs */}
+                    <CategoryPicker app={app} id={displayCategoryId}/>
+                    <ProjectPicker app={app} id={displayProjectId}/>
+
                     <ImportancePicker app={app} importance={task.importance}/>
                     <TaskTypePicker app={app} taskType={task.dateType}/>
                     <DatePicker app={app} date={task.addDate}/>
@@ -148,10 +254,9 @@ const s = StyleSheet.create({
         fontWeight: '500',
         paddingVertical: 0,
         paddingHorizontal: 0,
-        textAlignVertical: 'top',   // Android
+        textAlignVertical: 'top',
         position:"relative",
         top:4,
-        // RN Web:
         wordBreak: 'break-word'
     },
     noteWrap: {
