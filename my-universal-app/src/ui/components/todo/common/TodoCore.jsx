@@ -96,18 +96,21 @@ const styles = StyleSheet.create({
         flex: 1,
         minHeight: 0,
     },
-    body: { flex: 1, minHeight: 0 },
+    body: {
+        flex: 1,
+        minHeight: 0,
+        marginBottom: Platform.select({web: 130, default: 80}),
+    },
     container: {
         flex: 1,
-        padding: 24,
-        minHeight:"80%",
-        overflowY: 'hidden',
-        overscrollBehavior: 'contain',
-        scrollBehavior: 'smooth',
-        scrollbarWidth: "thin",
-        scrollbarColor: "#2A2A2A #000000",
-        scrollbarGutter: "stable",
-
+        ...Platform.select({
+            web: {
+                scrollbarWidth: "thin",
+                scrollbarColor: "rgba(255,255,255,0.3) transparent",
+                scrollBehavior: 'smooth',
+            }
+        }),
+        padding: Platform.select({web: 24, default: 12}),
     },
 
     wrap: {
@@ -186,9 +189,9 @@ const styles = StyleSheet.create({
 
     },
     listContent: {
-        paddingHorizontal: 16,
-        paddingBottom: 24,
-
+        paddingHorizontal: 24,
+        paddingTop: 24,       
+        paddingBottom: 100,   
     },
     inlineActions: {
         flexDirection: "row",
