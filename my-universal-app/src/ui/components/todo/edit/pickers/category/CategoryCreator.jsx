@@ -63,7 +63,9 @@ export default function CategoryCreator({onBack, onSuccess}) {
      */
     const handleCreate = () => {
         if (!name.trim()) return;
-        onSuccess();
+        let selectedColorRGB = hexToRgb(selectedColor)
+        let id = generateUUID();
+        onSuccess(id, name, selectedColorRGB);
     };
 
     return (
@@ -177,6 +179,43 @@ const hslToHex = (h, s, l) => {
         return Math.round(255 * color).toString(16).padStart(2, '0');
     };
     return `#${f(0)}${f(8)}${f(4)}`;
+};
+
+/**
+ * Converts a HEX color string to an RGB object.
+ * Supports "#RRGGBB" and "#RGB" formats.
+ * @param {string} hex - The hex string (e.g., "#FF5733" or "000")
+ * @returns {{r: number, g: number, b: number} | null} RGB object or null if invalid
+ */
+export const hexToRgb = (hex) => {
+    hex = hex.replace(/^#/, '');
+
+    if (hex.length === 3) {
+        hex = hex.split('').map(char => char + char).join('');
+    }
+
+    if (hex.length !== 6) return null;
+
+    const bigint = parseInt(hex, 16);
+
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+
+    return { r, g, b };
+};
+
+/**
+ * Generates a Version 4 UUID (Random)
+ * Format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+ * @returns {string} e.g. "97f0e6ed-6185-41f0-a08e-42010a400011"
+ */
+export const generateUUID = () => {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+    });
 };
 
 /**

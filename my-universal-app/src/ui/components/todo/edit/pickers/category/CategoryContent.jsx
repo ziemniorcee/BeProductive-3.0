@@ -23,8 +23,9 @@ export default function CategoryContent({ app, allCategories, type, closeMenu })
         return (
             <CategoryCreator
                 onBack={() => setIsCreating(false)}
-                onSuccess={() => {
+                onSuccess={async (id, name, colorRGB) => {
                     setIsCreating(false);
+                    await app.services.categories.add(id, name, colorRGB);
                     closeMenu();
                 }}
             />

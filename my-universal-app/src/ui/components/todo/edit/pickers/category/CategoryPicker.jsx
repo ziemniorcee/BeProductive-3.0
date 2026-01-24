@@ -1,6 +1,8 @@
-import React from "react";
+import React, {useEffect, useState} from "react";
 import EditPicker from "../common/EditPicker";
 import CategoryContent from "./CategoryContent";
+import {useMyDay} from "../../../../../context/MyDayContext";
+import {useStrategy} from "../../../../../context/StrategyContext";
 
 /**
  * CategoryPicker Component
@@ -13,14 +15,51 @@ import CategoryContent from "./CategoryContent";
  */
 export default function CategoryPicker({ app, id }) {
     const noneCategory = { id: null, name: "No category", color: "#FFFFFF" }
+    const [selectedId, setSelectedId] = useState(id);
+    const [categories, setCategories] = useState(app.services.categories.get());
+    const currentScreen = app.view.current().screen;
+    let saveToBackend = null;
 
-    let currentColor = app.services.categories.colorByPublicId(id);
-    let currentName = app.services.categories.nameByPublicId(id);
-    let current = { color: currentColor, name: currentName };
-    let src = app.services.categories.get().byPublicId;
+    if (currentScreen === "myday") {
+        const { patchEdit } = useMyDay();
+        saveToBackend = patchEdit;
+    } else if (currentScreen === "strategy") {
+        const { patchNewPoint } = useStrategy();
+        saveToBackend = patchNewPoint;
+    }
+
+    const handleSelect = (newId) => {
+        setSelectedId(newId);
+
+        if (saveToBackend) {
+            saveToBackend({ "categoryPublicId": newId });
+        }
+    };
+
+    useEffect(() => {
+        setSelectedId(id);
+    }, [id]);
+
+    useEffect(() => {
+        return app.services.categories.subscribe((newState) => {
+            setCategories(newState);
+
+            if (newState.newCategoryId) {
+                handleSelect(newState.newCategoryId);
+
+                if (app.services.categories.clearNewCategory) {
+                    app.services.categories.clearNewCategory();
+                }
+            }
+        });
+    }, [app.services.categories]);
+
+    let src = categories.byPublicId;
     let type = "categoryPublicId";
     let label = "Category";
-
+    let currentColor = app.services.categories.colorByPublicId(selectedId);
+    let currentName = app.services.categories.nameByPublicId(selectedId);
+    let current = { color: currentColor, name: currentName };
     let allCategories = { noneCategory, ...src };
 
     return (
