@@ -1,26 +1,27 @@
-// SpotlightOverlay.class.jsx
-import React, {PureComponent} from "react";
-import {View, StyleSheet, Platform, Pressable, Modal} from "react-native";
-import Svg, {Defs, Mask, Rect, RadialGradient, Stop} from "react-native-svg";
-import {GestureHandlerRootView} from "react-native-gesture-handler";
+import React, { PureComponent } from "react";
+import { View, StyleSheet, Platform, Pressable, Modal } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 export default class Vignette extends PureComponent {
     static defaultProps = {
         opacity: 0.6,
         radius: "85%",
-        window: {x: null, y: null, width: 0, height: 0, rx: 24},
+        window: { x: null, y: null, width: 0, height: 0, rx: 24 },
     };
 
-    state = {w: 0, h: 0};
+    state = { w: 0, h: 0 };
+
+    canClose = false;
+
     onLayout = e => {
-        const {width, height} = e.nativeEvent.layout;
-        this.setState({w: width, h: height});
+        const { width, height } = e.nativeEvent.layout;
+        this.setState({ w: width, h: height });
     };
 
     allowClose = true;
 
     getRect() {
-        const {w, h} = this.state;
+        const { w, h } = this.state;
         const win = this.props.window;
         this.allowClose = win.allowClose ?? true;
 
@@ -47,53 +48,67 @@ export default class Vignette extends PureComponent {
         const x = win.x ?? Math.round((w - width) / 2);
         const y = win.y ?? Math.round((h - height) / 2);
         const rx = win.rx ?? 24;
-        return {x, y, width, height, rx};
+        return { x, y, width, height, rx };
     }
 
     close = () => {
-        if (this.allowClose) {
+        if (this.allowClose && this.canClose) {
             this.props.onClose();
         }
+        this.canClose = false;
     };
 
     render() {
-        const {w, h} = this.state;
-        const {opacity, radius, children, style, app} = this.props;
+        const { w, h } = this.state;
+        const { style, children } = this.props;
         const r = this.getRect();
 
         return (
             <Modal transparent animationType="fade">
                 <GestureHandlerRootView style={{ flex: 1 }}>
-                <Pressable style={{
-                    ...StyleSheet.absoluteFillObject,
-                    justifyContent: "center",
-                    alignItems: "center",
-                    backgroundColor: "rgba(0,0,0,0.5)"}}
-                    onPress={() => this.close()}>
-                    <View style={[StyleSheet.absoluteFill, style]} onLayout={this.onLayout}>
-                        {w > 0 && h > 0 && (
-                            <Pressable onPress={() => console.log('pressed')} style={{cursor: 'default'}}>
-                                {/* center block, interactive */}
-                                <View
-                                    style={{
-                                        position: "absolute",
-                                        left: r.x,
-                                        top: r.y,
-                                        width: Platform.select({web: r.width ?? '100%', default: "100%"}),
-                                        height: r.height,
-                                        borderRadius: r.rx,
-                                        backgroundColor: "#000000F1", // semi-opaque card
-                                        borderWidth: 1,
-                                        borderColor: "#FFFFFF33",
-                                        overflow: "hidden",
+                    <Pressable
+                        style={{
+                            ...StyleSheet.absoluteFillObject,
+                            justifyContent: "center",
+                            alignItems: "center",
+                            backgroundColor: "rgba(0,0,0,0.5)"
+                        }}
+                        onPressIn={() => { this.canClose = true; }}
+                        onPress={this.close}
+                    >
+                        <View style={[StyleSheet.absoluteFill, style]} onLayout={this.onLayout}>
+                            {w > 0 && h > 0 && (
+                                <Pressable
+                                    onPress={(e) => {
+                                        e.stopPropagation && e.stopPropagation();
+                                        console.log('pressed inner');
                                     }}
+                                    onPressIn={(e) => {
+                                        e.stopPropagation && e.stopPropagation();
+                                        this.canClose = false;
+                                    }}
+                                    style={{ cursor: 'default' }}
                                 >
-                                    {children /* put your content here */}
-                                </View>
-                            </Pressable>
-                        )}
-                    </View>
-                </Pressable>
+                                    <View
+                                        style={{
+                                            position: "absolute",
+                                            left: r.x,
+                                            top: r.y,
+                                            width: Platform.select({ web: r.width ?? '100%', default: "100%" }),
+                                            height: r.height,
+                                            borderRadius: r.rx,
+                                            backgroundColor: "#000000F1",
+                                            borderWidth: 1,
+                                            borderColor: "#FFFFFF33",
+                                            overflow: "hidden",
+                                        }}
+                                    >
+                                        {children}
+                                    </View>
+                                </Pressable>
+                            )}
+                        </View>
+                    </Pressable>
                 </GestureHandlerRootView>
             </Modal>
         );
